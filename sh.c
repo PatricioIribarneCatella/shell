@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,12 +11,15 @@
 #define END_STRING '\0'
 #define END_LINE '\n'
 #define BUFLEN 1024
+#define PRMTLEN 1024
 
 static char buffer[BUFLEN];
+static char promt[PRMTLEN];
 
 static char* readline(const char* promt) {
 
-	fprintf(stdout, "%s", promt);
+	fprintf(stdout, "%s\n", promt);
+	fprintf(stdout, "%s", "$ ");
 
 	memset(buffer, 0, BUFLEN);
 
@@ -54,8 +59,13 @@ int main(int argc, char const *argv[]) {
 
 	if (chdir(home) < 0)
 		fprintf(stderr, "cannot cd to %s. error: %s\n", home, strerror(errno));
+	else {
+		strcat(promt, "(");
+		strcat(promt, home);
+		strcat(promt, ")");
+	}
 
-	while ((cmd = readline("$ ")) != NULL) {
+	while ((cmd = readline(promt)) != NULL) {
 		
 		// if the "enter" key is pressed just
 		// print the promt again
@@ -66,8 +76,18 @@ int main(int argc, char const *argv[]) {
 
 		// chdir has to be called within the father, not the child.
 		if (cmd[0] == 'c' && cmd[1] == 'd' && cmd[2] == ' ') {
+			
 			if (chdir(cmd + 3) < 0)
 				fprintf(stderr, "cannot cd to %s. error: %s\n", cmd + 3, strerror(errno));
+			else {
+				memset(promt, 0, PRMTLEN);
+				strcat(promt, "(");
+				char* cwd = get_current_dir_name();
+				strcat(promt, cwd);
+				free(cwd);
+				strcat(promt, ")");
+			}
+			
 			continue;
 		}
 
