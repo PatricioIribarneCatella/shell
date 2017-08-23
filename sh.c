@@ -43,7 +43,7 @@ static char* readline(const char* promt) {
 
 	return (buffer[0] != 0) ? buffer : NULL;
 }
-
+/*
 static struct cmd* parsecmd(char* buf) {
 	
 	return NULL;
@@ -52,7 +52,7 @@ static struct cmd* parsecmd(char* buf) {
 static void runcmd(struct cmd* cmd) {
 
 }
-
+*/
 int main(int argc, char const *argv[]) {
 
 	pid_t p;	
