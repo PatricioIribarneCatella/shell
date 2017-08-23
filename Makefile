@@ -10,7 +10,6 @@ all: sh
 
 sh: $(BINFILES) sh.c
 	$(CC) $(CFLAGS) $^ -o $@
-	objdump -S $@ > $@.asm
 
 run: all
 	./sh

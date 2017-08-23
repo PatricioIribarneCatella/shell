@@ -8,6 +8,9 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
+#define COLOR_RED "\x1b[31m"
+#define COLOR_RESET "\x1b[0m"
+
 #define END_STRING '\0'
 #define END_LINE '\n'
 #define BUFLEN 1024
@@ -18,7 +21,7 @@ static char promt[PRMTLEN];
 
 static char* readline(const char* promt) {
 
-	fprintf(stdout, "%s\n", promt);
+	fprintf(stdout, "%s %s %s\n", COLOR_RED, promt, COLOR_RESET);
 	fprintf(stdout, "%s", "$ ");
 
 	memset(buffer, 0, BUFLEN);
