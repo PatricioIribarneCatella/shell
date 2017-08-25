@@ -92,14 +92,15 @@ static struct cmd* parsecmd(char* buf) {
 
 static void runcmd(struct cmd* cmd) {
 
-	struct execcmd* execcmd; 
+	struct execcmd exec; 
 
 	switch (cmd->type) {
 	
 	case EXEC:
-		execcmd = (struct execcmd*)cmd;
-		execvp(execcmd->argv[0], execcmd->argv);
-		fprintf(stderr, "cannot exec %s. error: %s\n", execcmd->argv[0], strerror(errno));
+		exec = *(struct execcmd*)cmd;
+		free(cmd);
+		execvp(exec.argv[0], exec.argv);
+		fprintf(stderr, "cannot exec %s. error: %s\n", exec.argv[0], strerror(errno));
 		break;
 	}
 
