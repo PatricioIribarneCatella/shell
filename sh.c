@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
+#define COLOR_BLUE "\x1b[34m"
 #define COLOR_RED "\x1b[31m"
 #define COLOR_RESET "\x1b[0m"
 
@@ -94,7 +95,7 @@ int main(int argc, char const *argv[]) {
 			continue;
 		}
 
-		// the exit command must be called in the father
+		// exit command must be called in the father
 		if (strcmp(cmd, "exit") == 0)
 			_exit(EXIT_SUCCESS);
 /*
@@ -104,7 +105,22 @@ int main(int argc, char const *argv[]) {
 		if ((p = fork()) == 0)
 			execlp(cmd, cmd, (char*) NULL);
 
-		waitpid(p, NULL, 0);
+		int status;
+
+		waitpid(p, &status, 0);
+
+		if (WIFEXITED(status)) {
+
+			fprintf(stdout, "%s	Program: %s exited, status: %d %s\n", COLOR_BLUE, cmd, WEXITSTATUS(status), COLOR_RESET);
+
+		} else if (WIFSIGNALED(status)) {
+
+			fprintf(stdout, "%s	Program: %s killed, status: %d %s\n", COLOR_BLUE, cmd, -WTERMSIG(status), COLOR_RESET);
+
+		} else if (WTERMSIG(status)) {
+
+			fprintf(stdout, "%s	Program: %s stopped, status: %d %s\n", COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
+		}
 	}
 	
 	return 0;
