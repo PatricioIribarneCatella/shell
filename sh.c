@@ -32,10 +32,9 @@ struct execcmd {
 	char* eargv[MAXARGS];
 };
 
+int status;
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
-
-int status;
 
 static char* readline(const char* promt) {
 
@@ -152,12 +151,11 @@ int main(int argc, char const *argv[]) {
 		if (strcmp(cmd, "exit") == 0)
 			_exit(EXIT_SUCCESS);
 
+		// forks and run the command
 		if ((p = fork()) == 0)
 			runcmd(parsecmd(cmd));
-/*
-		if ((p = fork()) == 0)
-			execlp(cmd, cmd, (char*) NULL);
-*/
+		
+		// waits for the process to finish
 		waitpid(p, &status, 0);
 
 		if (WIFEXITED(status)) {
