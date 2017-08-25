@@ -20,6 +20,8 @@
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
 
+int status;
+
 static char* readline(const char* promt) {
 
 	fprintf(stdout, "%s %s %s\n", COLOR_RED, promt, COLOR_RESET);
@@ -104,8 +106,6 @@ int main(int argc, char const *argv[]) {
 */
 		if ((p = fork()) == 0)
 			execlp(cmd, cmd, (char*) NULL);
-
-		int status;
 
 		waitpid(p, &status, 0);
 
