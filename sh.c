@@ -14,8 +14,23 @@
 
 #define END_STRING '\0'
 #define END_LINE '\n'
+#define SPACE ' '
 #define BUFLEN 1024
 #define PRMTLEN 1024
+#define MAXARGS 20
+
+// Command representation after parsed
+#define EXEC 1
+
+struct cmd {
+	int type;
+};
+
+struct execcmd {
+	int type;
+	char* argv[MAXARGS];
+	char* eargv[MAXARGS];
+};
 
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
@@ -46,16 +61,52 @@ static char* readline(const char* promt) {
 
 	return (buffer[0] != 0) ? buffer : NULL;
 }
-/*
+
 static struct cmd* parsecmd(char* buf) {
+
+	struct execcmd* cmd = malloc(sizeof(*cmd));
+	memset(cmd, 0, sizeof(*cmd));
+
+	cmd->type = EXEC;
+
+	int argc = 0, i = 0;
+	char* startarg = buf;
 	
-	return NULL;
+	cmd->argv[argc++] = startarg;
+
+	while (buf[i]) {
+	
+		if (buf[i] == SPACE) {
+			
+			buf[i] = END_STRING; // null-terminate the argument
+			startarg = &buf[++i];
+			cmd->argv[argc++] = startarg;
+		}
+
+		i++;
+	}
+
+	cmd->argv[argc] = (char*)NULL;
+
+	return (struct cmd*)cmd;
 }
 
 static void runcmd(struct cmd* cmd) {
 
+	struct execcmd* execcmd; 
+
+	switch (cmd->type) {
+	
+	case EXEC:
+		execcmd = (struct execcmd*)cmd;
+		execvp(execcmd->argv[0], execcmd->argv);
+		fprintf(stderr, "cannot exec %s. error: %s\n", execcmd->argv[0], strerror(errno));
+		break;
+	}
+
+	_exit(EXIT_FAILURE);
 }
-*/
+
 int main(int argc, char const *argv[]) {
 
 	pid_t p;	
@@ -100,13 +151,13 @@ int main(int argc, char const *argv[]) {
 		// exit command must be called in the father
 		if (strcmp(cmd, "exit") == 0)
 			_exit(EXIT_SUCCESS);
-/*
+
 		if ((p = fork()) == 0)
 			runcmd(parsecmd(cmd));
-*/
+/*
 		if ((p = fork()) == 0)
 			execlp(cmd, cmd, (char*) NULL);
-
+*/
 		waitpid(p, &status, 0);
 
 		if (WIFEXITED(status)) {
