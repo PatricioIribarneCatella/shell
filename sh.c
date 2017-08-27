@@ -76,20 +76,26 @@ static struct cmd* parsecmd(char* buf) {
 
 	cmd->type = EXEC;
 
-	int argc = 0, i = 0;
+	int idx, argc = 0, i = 0;
 
-	while (buf[i]) {
+	while (buf[i] != END_STRING) {
 
 		char* arg = malloc(ARGSIZE);
 		memset(arg, 0, ARGSIZE);	
-
-		int idx = 0;
-
-		//printf("%s\n", buf);
+		idx = 0;
 
 		while (buf[i] != SPACE && buf[i] != END_STRING) {
 			arg[idx] = buf[i];
 			i++; idx++;
+		}
+
+		i++; // goes to the next argument
+
+		// expand environment variables
+		if (arg[0] == '$') {
+			char* aux = arg;
+			arg = getenv(arg + 1);
+			free(aux);
 		}
 
 		cmd->argv[argc++] = arg;
