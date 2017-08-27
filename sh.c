@@ -18,6 +18,7 @@
 #define BUFLEN 1024
 #define PRMTLEN 1024
 #define MAXARGS 20
+#define ARGSIZE 20
 
 // Command representation after parsed
 #define EXEC 1
@@ -60,14 +61,6 @@ static char* readline(const char* promt) {
 
 	return (buffer[0] != 0) ? buffer : NULL;
 }
-
-#define ARGSIZE 20
-
-// gets the next argument considering
-// the "cut" as the stop of this arg
-//static char* getarg(char* buf, char cut) {
-
-//}
 
 static struct cmd* parsecmd(char* buf) {
 
