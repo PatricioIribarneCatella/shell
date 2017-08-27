@@ -22,7 +22,7 @@ static void ls(const char* path) {
 	int r;
 
 	if (stat(path, &st) < 0) {
-		printf("cannot stat directory/file: %s. error: %s\n",
+		fprintf(stderr, "cannot stat directory/file: %s. error: %s\n",
 			path, strerror_r(errno, buf, sizeof(buf)));
 		return;
 	}
@@ -38,7 +38,7 @@ static void ls(const char* path) {
 	if (S_ISDIR(st.st_mode)) {
 
 		if (!(d = opendir(path))) {
-			printf("cannot open directory: %s. error: %s\n",
+			fprintf(stderr, "cannot open directory: %s. error: %s\n",
 				path, strerror_r(errno, buf, sizeof(buf)));
 			return;
 		}
@@ -53,7 +53,7 @@ static void ls(const char* path) {
 			strcat(filepath, entry.d_name);
 
 			if (stat(filepath, &st) < 0) {
-				printf("cannot stat directory/file: %s. error: %s\n",
+				fprintf(stderr, "cannot stat directory/file: %s. error: %s\n",
 					filepath, strerror_r(errno, buf, sizeof(buf)));
 			} else {
 				printf("mode: %lo size: %ld  uid: %d  gid: %d inode: %lu file: %s\n",
