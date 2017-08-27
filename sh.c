@@ -61,21 +61,13 @@ static char* readline(const char* promt) {
 	return (buffer[0] != 0) ? buffer : NULL;
 }
 
+#define ARGSIZE 20
+
 // gets the next argument considering
 // the "cut" as the stop of this arg
-static int getarg(char* buf, char** arg, char cut) {
+//static char* getarg(char* buf, char cut) {
 
-	*arg = buf;
-
-	int idx = 0;
-	
-	while (buf[idx] != cut)
-		idx++;
-
-	buf[idx] = END_STRING;
-	
-	return idx;
-}
+//}
 
 static struct cmd* parsecmd(char* buf) {
 
@@ -84,19 +76,23 @@ static struct cmd* parsecmd(char* buf) {
 
 	cmd->type = EXEC;
 
-	int argc = 0;
+	int argc = 0, i = 0;
 
-	while ((*buf) != END_STRING) {
+	while (buf[i]) {
 
-		char* arg;
-		int offset = getarg(buf, &arg, SPACE);
+		char* arg = malloc(ARGSIZE);
+		memset(arg, 0, ARGSIZE);	
 
-		if (arg[0] == '$')
-			arg = getenv(arg + 1);
+		int idx = 0;
+
+		//printf("%s\n", buf);
+
+		while (buf[i] != SPACE && buf[i] != END_STRING) {
+			arg[idx] = buf[i];
+			i++; idx++;
+		}
 
 		cmd->argv[argc++] = arg;
-
-		buf = buf + strlen(arg);
 	}
 
 	cmd->argv[argc] = (char*)NULL;
