@@ -36,6 +36,23 @@ struct execcmd {
 int status;
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
+static char numbers[10] = "0123456789";
+static char bufNum[32];
+
+static char* itoa(int val) {
+
+	if (val == 0) return "0";
+
+	int i;
+
+	for (i = 30; val > 0 ; --i) {
+
+		bufNum[i] = numbers[val % 10];
+		val /= 10;
+	}
+
+	return &bufNum[i + 1];
+}
 
 static char* readline(const char* promt) {
 
@@ -86,8 +103,14 @@ static struct cmd* parsecmd(char* buf) {
 
 		// expand environment variables
 		if (arg[0] == '$') {
+
 			char* aux = arg;
-			arg = getenv(arg + 1);
+			
+			if (arg[1] == '?')
+				arg = itoa(status);
+			else
+				arg = getenv(arg + 1);
+
 			free(aux);
 		}
 
@@ -171,14 +194,17 @@ int main(int argc, char const *argv[]) {
 		if (WIFEXITED(status)) {
 
 			fprintf(stdout, "%s	Program: %s exited, status: %d %s\n", COLOR_BLUE, cmd, WEXITSTATUS(status), COLOR_RESET);
+			status = WEXITSTATUS(status);
 
 		} else if (WIFSIGNALED(status)) {
 
 			fprintf(stdout, "%s	Program: %s killed, status: %d %s\n", COLOR_BLUE, cmd, -WTERMSIG(status), COLOR_RESET);
+			status = -WTERMSIG(status);
 
 		} else if (WTERMSIG(status)) {
 
 			fprintf(stdout, "%s	Program: %s stopped, status: %d %s\n", COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
+			status = -WSTOPSIG(status);
 		}
 	}
 	
