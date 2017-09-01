@@ -115,6 +115,9 @@ static struct cmd* parsecmd(char* buf) {
 		}
 
 		cmd->argv[argc++] = arg;
+
+		if (buf[i] == '&')
+			cmd->type = BACK;
 	}
 
 	cmd->argv[argc] = (char*)NULL;
@@ -124,7 +127,8 @@ static struct cmd* parsecmd(char* buf) {
 
 static void runcmd(struct cmd* cmd) {
 
-	struct execcmd exec; 
+	struct execcmd exec;
+	struct backcmd back;
 
 	switch (cmd->type) {
 	
@@ -136,7 +140,13 @@ static void runcmd(struct cmd* cmd) {
 		break;
 	}
 
-	_exit(EXIT_FAILURE);
+	case BACK:
+		if (fork() == 0)
+			runcmd(cmd->);
+
+		
+
+	_exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char const *argv[]) {
