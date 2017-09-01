@@ -22,6 +22,7 @@
 
 // Command representation after parsed
 #define EXEC 1
+#define BACK 2
 
 struct cmd {
 	int type;
@@ -89,35 +90,36 @@ static struct cmd* parsecmd(char* buf) {
 	int idx, argc = 0, i = 0;
 
 	while (buf[i] != END_STRING) {
-
-		char* arg = malloc(ARGSIZE);
-		memset(arg, 0, ARGSIZE);	
-		idx = 0;
-
-		while (buf[i] != SPACE && buf[i] != END_STRING) {
-			arg[idx] = buf[i];
-			i++; idx++;
-		}
-
-		i++; // goes to the next argument
-
-		// expand environment variables
-		if (arg[0] == '$') {
-
-			char* aux = arg;
-			
-			if (arg[1] == '?')
-				arg = itoa(status);
-			else
-				arg = getenv(arg + 1);
-
-			free(aux);
-		}
-
-		cmd->argv[argc++] = arg;
-
+		
 		if (buf[i] == '&')
 			cmd->type = BACK;
+		else {
+			char* arg = malloc(ARGSIZE);
+			memset(arg, 0, ARGSIZE);	
+			idx = 0;
+
+			while (buf[i] != SPACE && buf[i] != END_STRING) {
+				arg[idx] = buf[i];
+				i++; idx++;
+			}
+
+			i++; // goes to the next argument
+
+			// expand environment variables
+			if (arg[0] == '$') {
+
+				char* aux = arg;
+			
+				if (arg[1] == '?')
+					arg = itoa(status);
+				else
+					arg = getenv(arg + 1);
+				
+				free(aux);
+			}
+
+			cmd->argv[argc++] = arg;
+		}
 	}
 
 	cmd->argv[argc] = (char*)NULL;
@@ -128,8 +130,7 @@ static struct cmd* parsecmd(char* buf) {
 static void runcmd(struct cmd* cmd) {
 
 	struct execcmd exec;
-	struct backcmd back;
-
+	
 	switch (cmd->type) {
 	
 	case EXEC:
@@ -138,13 +139,14 @@ static void runcmd(struct cmd* cmd) {
 		execvp(exec.argv[0], exec.argv);
 		fprintf(stderr, "cannot exec %s. error: %s\n", exec.argv[0], strerror(errno));
 		break;
-	}
 
 	case BACK:
-		if (fork() == 0)
-			runcmd(cmd->);
-
-		
+		if (fork() == 0) {
+			cmd->type = EXEC;
+			runcmd(cmd);
+		}
+		break;
+	}
 
 	_exit(EXIT_SUCCESS);
 }
