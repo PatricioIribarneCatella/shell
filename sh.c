@@ -124,7 +124,7 @@ static struct cmd* parsecmd(char* buf) {
 
 static void runcmd(struct cmd* cmd) {
 
-	struct execcmd exec; 
+	struct execcmd exec;
 
 	switch (cmd->type) {
 	
@@ -136,7 +136,7 @@ static void runcmd(struct cmd* cmd) {
 		break;
 	}
 
-	_exit(EXIT_FAILURE);
+	_exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char const *argv[]) {
