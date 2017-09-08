@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 
@@ -35,10 +36,26 @@ struct execcmd {
 };
 
 int status;
+pid_t back;
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
 static char numbers[10] = "0123456789";
 static char bufNum[32];
+
+// SIGCHLD new handler
+// If the *back* pid is not zero
+// (a process has been running in background)
+// then it waits for it to finish and then exists.
+void handler(int snumber) {
+
+	int s;
+
+	if (back != 0) {
+		wait(&s);
+		printf("	process %d running in background done\n", back);
+		_exit(EXIT_SUCCESS);
+	}
+}
 
 static char* itoa(int val) {
 
@@ -91,9 +108,11 @@ static struct cmd* parsecmd(char* buf) {
 
 	while (buf[i] != END_STRING) {
 		
-		if (buf[i] == '&')
+		if (buf[i] == '&') {
+			// run a process in background
 			cmd->type = BACK;
-		else {
+			i++;
+		} else {
 			char* arg = malloc(ARGSIZE);
 			memset(arg, 0, ARGSIZE);	
 			idx = 0;
@@ -133,22 +152,33 @@ static void runcmd(struct cmd* cmd) {
 	
 	switch (cmd->type) {
 	
-	case EXEC:
-		exec = *(struct execcmd*)cmd;
-		free(cmd);
-		execvp(exec.argv[0], exec.argv);
-		fprintf(stderr, "cannot exec %s. error: %s\n", exec.argv[0], strerror(errno));
-		break;
+		case EXEC:
+			exec = *(struct execcmd*)cmd;
+			free(cmd);
+			execvp(exec.argv[0], exec.argv);
+			fprintf(stderr, "cannot exec %s. error: %s\n", exec.argv[0], strerror(errno));
+			_exit(EXIT_FAILURE);
+			break;
 
-	case BACK:
-		if (fork() == 0) {
-			cmd->type = EXEC;
-			runcmd(cmd);
+		case BACK: {
+			// Change the current SIGCHLD handler with
+			// *handler*
+			struct sigaction act = (const struct sigaction){};
+			act.sa_handler = handler;
+			sigaction(SIGCHLD, &act, NULL);
+
+			// forks again and doesn´t wait for it
+			// to finish right now.
+			// When the process finishes it will send a SIGCHLD
+			// signal and it will notify its parent through 
+			// the handler defined above.
+			if ((back = fork()) == 0) {
+				cmd->type = EXEC;
+				runcmd(cmd);
+			}
+			break;
 		}
-		break;
 	}
-
-	_exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char const *argv[]) {
@@ -156,6 +186,7 @@ int main(int argc, char const *argv[]) {
 	pid_t p;	
 	char* cmd;
 
+	
 	char* home = getenv("HOME");
 
 	if (chdir(home) < 0)
