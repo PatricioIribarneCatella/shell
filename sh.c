@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -49,12 +50,8 @@ static char bufNum[32];
 void handler(int snumber) {
 
 	int s;
-
-	if (back != 0) {
-		wait(&s);
-		printf("	process %d running in background done\n", back);
-		_exit(EXIT_SUCCESS);
-	}
+	wait(&s);
+	printf("	process %d running in background done\n", back);
 }
 
 static char* itoa(int val) {
@@ -161,21 +158,8 @@ static void runcmd(struct cmd* cmd) {
 			break;
 
 		case BACK: {
-			// Change the current SIGCHLD handler with
-			// *handler*
-			struct sigaction act = (const struct sigaction){};
-			act.sa_handler = handler;
-			sigaction(SIGCHLD, &act, NULL);
-
-			// forks again and doesn´t wait for it
-			// to finish right now.
-			// When the process finishes it will send a SIGCHLD
-			// signal and it will notify its parent through 
-			// the handler defined above.
-			if ((back = fork()) == 0) {
-				cmd->type = EXEC;
-				runcmd(cmd);
-			}
+			cmd->type = EXEC;
+			runcmd(cmd);
 			break;
 		}
 	}
@@ -195,6 +179,12 @@ int main(int argc, char const *argv[]) {
 		strcat(promt, home);
 		strcat(promt, ")");
 	}
+
+	// Change the current SIGCHLD handler with
+	// *handler*
+	struct sigaction act = (const struct sigaction){};
+	act.sa_handler = handler;
+	sigaction(SIGCHLD, &act, NULL);
 
 	while ((cmd = readline(promt)) != NULL) {
 		
@@ -226,27 +216,39 @@ int main(int argc, char const *argv[]) {
 		if (strcmp(cmd, "exit") == 0)
 			_exit(EXIT_SUCCESS);
 
+		bool inBackground = false;
+
+		// parses the command line
+		struct cmd *parsedCmd = parsecmd(cmd);
+
+		if (parsedCmd->type == BACK)
+			inBackground = true;
+
 		// forks and run the command
-		if ((p = fork()) == 0)
-			runcmd(parsecmd(cmd));
+		if ((p = fork()) == 0) {
+			back = p;
+			runcmd(parsedCmd);
+		}
 		
-		// waits for the process to finish
-		waitpid(p, &status, 0);
+		if (!inBackground) {
+			// waits for the process to finish
+			waitpid(p, &status, 0);
 
-		if (WIFEXITED(status)) {
+			if (WIFEXITED(status)) {
 
-			fprintf(stdout, "%s	Program: %s exited, status: %d %s\n", COLOR_BLUE, cmd, WEXITSTATUS(status), COLOR_RESET);
-			status = WEXITSTATUS(status);
+				fprintf(stdout, "%s	Program: %s exited, status: %d %s\n", COLOR_BLUE, cmd, WEXITSTATUS(status), COLOR_RESET);
+				status = WEXITSTATUS(status);
 
-		} else if (WIFSIGNALED(status)) {
+			} else if (WIFSIGNALED(status)) {
 
-			fprintf(stdout, "%s	Program: %s killed, status: %d %s\n", COLOR_BLUE, cmd, -WTERMSIG(status), COLOR_RESET);
-			status = -WTERMSIG(status);
+				fprintf(stdout, "%s	Program: %s killed, status: %d %s\n", COLOR_BLUE, cmd, -WTERMSIG(status), COLOR_RESET);
+				status = -WTERMSIG(status);
 
-		} else if (WTERMSIG(status)) {
+			} else if (WTERMSIG(status)) {
 
-			fprintf(stdout, "%s	Program: %s stopped, status: %d %s\n", COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
-			status = -WSTOPSIG(status);
+				fprintf(stdout, "%s	Program: %s stopped, status: %d %s\n", COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
+				status = -WSTOPSIG(status);
+			}
 		}
 	}
 	
