@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <fcntl.h>
 
 #define COLOR_BLUE "\x1b[34m"
 #define COLOR_RED "\x1b[31m"
@@ -85,10 +86,10 @@ static char* readline(const char* promt) {
 // looks in the argument for the '=' character
 // and returns the index in which it is, or -1
 // in other case
-static int argIsAnEnvironVar(char* arg) {
+static int argContains(char* arg, char c) {
 
 	for (int i = 0; i < strlen(arg); i++)
-		if (arg[i] == '=')
+		if (arg[i] == c)
 			return i;
 	return -1;
 }
@@ -122,7 +123,7 @@ static struct cmd* parsecmd(char* buf) {
 
 	cmd->type = EXEC;
 
-	int idx, equalIndex, argc = 0, i = 0;
+	int fd, idx, equalIndex, redirOutputIndex, argc = 0, i = 0;
 
 	while (buf[i] != END_STRING) {
 		
@@ -142,9 +143,19 @@ static struct cmd* parsecmd(char* buf) {
 
 			i++; // goes to the next argument
 
+			if ((redirOutputIndex = argContains(arg, '>')) > 0) {
+				
+				if ((fd = open(arg + 1,
+						O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
+						S_IRUSR | S_IWUSR)) < 0)
+					fprintf(stderr, "Cannot open file at: %s. error: %s", arg + 1, strerror(errno));
+
+				continue;
+			}
+
 			// sets environment variables apart from the 
 			// ones defined in the global variable "environ"
-			if ((equalIndex = argIsAnEnvironVar(arg)) > 0) {
+			if ((equalIndex = argContains(arg, '=')) > 0) {
 				
 				char key[50], value[50];
 				
