@@ -25,6 +25,7 @@
 // Command representation after parsed
 #define EXEC 1
 #define BACK 2
+#define REDIR 3
 
 struct cmd {
 	int type;
@@ -32,6 +33,8 @@ struct cmd {
 
 struct execcmd {
 	int type;
+	int fd_in;
+	int fd_out;
 	char* argv[MAXARGS];
 	char* eargv[MAXARGS];
 };
@@ -148,7 +151,11 @@ static struct cmd* parsecmd(char* buf) {
 				if ((fd = open(arg + 1,
 						O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
 						S_IRUSR | S_IWUSR)) < 0)
-					fprintf(stderr, "Cannot open file at: %s. error: %s", arg + 1, strerror(errno));
+					fprintf(stderr, "Cannot open redir file at: %s. error: %s", arg + 1, strerror(errno));
+				else {
+					cmd->fd_out = fd;
+					cmd->type = REDIR;
+				}
 
 				continue;
 			}
@@ -192,6 +199,7 @@ static struct cmd* parsecmd(char* buf) {
 static void runcmd(struct cmd* cmd) {
 
 	struct execcmd exec;
+	struct execcmd redir;
 
 	switch (cmd->type) {
 	
@@ -206,6 +214,14 @@ static void runcmd(struct cmd* cmd) {
 		case BACK: {
 			// sets the current process group id to 0
 			setpgid(0, 0);
+			cmd->type = EXEC;
+			runcmd(cmd);
+			break;
+		}
+
+		case REDIR: {
+			redir = *(struct execcmd*)cmd;
+			dup2(redir.fd_out, 1);
 			cmd->type = EXEC;
 			runcmd(cmd);
 			break;
