@@ -86,7 +86,7 @@ static char* readline(const char* promt) {
 	return (buffer[0] != 0) ? buffer : NULL;
 }
 
-// looks in the argument for the '=' character
+// looks in the argument for the 'c' character
 // and returns the index in which it is, or -1
 // in other case
 static int argContains(char* arg, char c) {
@@ -146,12 +146,14 @@ static struct cmd* parsecmd(char* buf) {
 
 			i++; // goes to the next argument
 
-			if ((redirOutputIndex = argContains(arg, '>')) > 0) {
+			// flow redirection for output
+			if ((redirOutputIndex = argContains(arg, '>')) >= 0) {
 				
-				if ((fd = open(arg + 1,
+				if ((fd = open(arg + redirOutputIndex + 1,
 						O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
 						S_IRUSR | S_IWUSR)) < 0)
-					fprintf(stderr, "Cannot open redir file at: %s. error: %s", arg + 1, strerror(errno));
+					fprintf(stderr, "Cannot open redir file at: %s. error: %s", 
+							arg + redirOutputIndex + 1, strerror(errno));
 				else {
 					cmd->fd_out = fd;
 					cmd->type = REDIR;
