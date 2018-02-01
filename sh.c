@@ -123,10 +123,12 @@ static struct cmd* parsecmd(char* buf) {
 
 	struct execcmd* cmd = malloc(sizeof(*cmd));
 	memset(cmd, 0, sizeof(*cmd));
-
+	
+	cmd->fd_in = -1;
+	cmd->fd_out = -1;
 	cmd->type = EXEC;
 
-	int fd, idx, equalIndex, redirOutputIndex, argc = 0, i = 0;
+	int fd, idx, equalIndex, redirOutputIndex, redirInputIndex, argc = 0, i = 0;
 
 	while (buf[i] != END_STRING) {
 		
@@ -160,6 +162,23 @@ static struct cmd* parsecmd(char* buf) {
 				}
 
 				continue;
+			}
+
+			// flow redirection for input
+			if ((redirInputIndex = argContains(arg, '<')) >= 0) {
+				
+				if ((fd = open(arg + redirInputIndex + 1,
+						O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
+						S_IRUSR | S_IWUSR)) < 0)
+					fprintf(stderr, "Cannot open redir file at: %s. error: %s", 
+							arg + redirInputIndex + 1, strerror(errno));
+				else {
+					cmd->fd_in = fd;
+					cmd->type = REDIR;
+				}
+
+				continue;
+
 			}
 
 			// sets environment variables apart from the 
@@ -223,7 +242,10 @@ static void runcmd(struct cmd* cmd) {
 
 		case REDIR: {
 			redir = *(struct execcmd*)cmd;
-			dup2(redir.fd_out, 1);
+			if (redir.fd_in >= 0)
+				dup2(redir.fd_in, 0);
+			if (redir.fd_out >= 0)
+				dup2(redir.fd_out, 1);
 			cmd->type = EXEC;
 			runcmd(cmd);
 			break;
