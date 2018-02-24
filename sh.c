@@ -242,6 +242,7 @@ static void runcmd(struct cmd* cmd) {
 		}
 
 		case REDIR: {
+			// changes the input/output flow
 			redir = *(struct execcmd*)cmd;
 			if (redir.fd_in >= 0)
 				dup2(redir.fd_in, 0);
