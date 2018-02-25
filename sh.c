@@ -27,6 +27,7 @@
 #define EXEC 1
 #define BACK 2
 #define REDIR 3
+#define PIPE 4
 
 struct cmd {
 	int type;
@@ -38,6 +39,12 @@ struct execcmd {
 	int fd_out;
 	char* argv[MAXARGS];
 	char* eargv[MAXARGS];
+};
+
+struct pipecmd {
+	int type;
+	struct cmd* leftcmd;
+	struct cmd* rightcmd;
 };
 
 int status;
@@ -124,22 +131,24 @@ static struct cmd* parsecmd(char* buf) {
 
 	struct execcmd* cmd = malloc(sizeof(*cmd));
 	memset(cmd, 0, sizeof(*cmd));
-	
+
 	cmd->fd_in = -1;
 	cmd->fd_out = -1;
 	cmd->type = EXEC;
 
-	int fd, idx, equalIndex, redirOutputIndex, redirInputIndex, argc = 0, i = 0;
+	int fd, idx,
+		equalIndex, redirOutputIndex, redirInputIndex,
+		argc = 0, i = 0;
 
 	while (buf[i] != END_STRING) {
-		
+
 		if (buf[i] == '&') {
 			// run a process in background
 			cmd->type = BACK;
 			i++;
 		} else {
 			char* arg = malloc(ARGSIZE);
-			memset(arg, 0, ARGSIZE);	
+			memset(arg, 0, ARGSIZE);
 			idx = 0;
 
 			while (buf[i] != SPACE && buf[i] != END_STRING) {
@@ -151,11 +160,11 @@ static struct cmd* parsecmd(char* buf) {
 
 			// flow redirection for output
 			if ((redirOutputIndex = argContains(arg, '>')) >= 0) {
-				
+
 				if ((fd = open(arg + redirOutputIndex + 1,
 						O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
 						S_IRUSR | S_IWUSR)) < 0)
-					fprintf(stderr, "Cannot open redir file at: %s. error: %s", 
+					fprintf(stderr, "Cannot open redir file at: %s. error: %s",
 							arg + redirOutputIndex + 1, strerror(errno));
 				else {
 					cmd->fd_out = fd;
@@ -167,11 +176,11 @@ static struct cmd* parsecmd(char* buf) {
 
 			// flow redirection for input
 			if ((redirInputIndex = argContains(arg, '<')) >= 0) {
-				
+
 				if ((fd = open(arg + redirInputIndex + 1,
 						O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
 						S_IRUSR | S_IWUSR)) < 0)
-					fprintf(stderr, "Cannot open redir file at: %s. error: %s", 
+					fprintf(stderr, "Cannot open redir file at: %s. error: %s",
 							arg + redirInputIndex + 1, strerror(errno));
 				else {
 					cmd->fd_in = fd;
@@ -182,15 +191,15 @@ static struct cmd* parsecmd(char* buf) {
 
 			}
 
-			// sets environment variables apart from the 
+			// sets environment variables apart from the
 			// ones defined in the global variable "environ"
 			if ((equalIndex = argContains(arg, '=')) > 0) {
-				
+
 				char key[50], value[50];
-				
+
 				getEnvironKey(arg, key);
 				getEnvironValue(arg, value, equalIndex);
-				
+
 				setenv(key, value, 1);
 
 				continue;
@@ -200,12 +209,12 @@ static struct cmd* parsecmd(char* buf) {
 			if (arg[0] == '$') {
 
 				char* aux = arg;
-			
+
 				if (arg[1] == '?')
 					arg = itoa(status);
 				else
 					arg = getenv(arg + 1);
-				
+
 				free(aux);
 			}
 
@@ -224,12 +233,13 @@ static void runcmd(struct cmd* cmd) {
 	struct execcmd redir;
 
 	switch (cmd->type) {
-	
+
 		case EXEC:
 			exec = *(struct execcmd*)cmd;
 			free(cmd);
 			execvp(exec.argv[0], exec.argv);
-			fprintf(stderr, "cannot exec %s. error: %s\n", exec.argv[0], strerror(errno));
+			fprintf(stderr, "cannot exec %s. error: %s\n",
+				exec.argv[0], strerror(errno));
 			_exit(EXIT_FAILURE);
 			break;
 
@@ -257,13 +267,14 @@ static void runcmd(struct cmd* cmd) {
 
 int main(int argc, char const *argv[]) {
 
-	pid_t p;	
+	pid_t p;
 	char* cmd;
-	
+
 	char* home = getenv("HOME");
 
 	if (chdir(home) < 0)
-		fprintf(stderr, "cannot cd to %s. error: %s\n", home, strerror(errno));
+		fprintf(stderr, "cannot cd to %s. error: %s\n",
+			home, strerror(errno));
 	else {
 		strcat(promt, "(");
 		strcat(promt, home);
@@ -274,7 +285,7 @@ int main(int argc, char const *argv[]) {
 
 		if ((back != 0) && waitpid(back, &status, WNOHANG) > 0)
 			printf("	process %d done\n", back);
-		
+
 		// if the "enter" key is pressed just
 		// print the promt again
 		if (cmd[0] == END_LINE)
@@ -284,9 +295,10 @@ int main(int argc, char const *argv[]) {
 
 		// chdir has to be called within the father, not the child.
 		if (cmd[0] == 'c' && cmd[1] == 'd' && cmd[2] == ' ') {
-			
+
 			if (chdir(cmd + 3) < 0)
-				fprintf(stderr, "cannot cd to %s. error: %s\n", cmd + 3, strerror(errno));
+				fprintf(stderr, "cannot cd to %s. error: %s\n",
+					cmd + 3, strerror(errno));
 			else {
 				memset(promt, 0, PRMTLEN);
 				strcat(promt, "(");
@@ -295,7 +307,7 @@ int main(int argc, char const *argv[]) {
 				free(cwd);
 				strcat(promt, ")");
 			}
-			
+
 			continue;
 		}
 
@@ -319,26 +331,29 @@ int main(int argc, char const *argv[]) {
 		if ((p = fork()) == 0) {
 			runcmd(parsedCmd);
 		}
-		
+
 		// waits for the process to finish
 		waitpid(p, &status, 0);
 
 		if (WIFEXITED(status)) {
 
-			fprintf(stdout, "%s	Program: %s exited, status: %d %s\n", COLOR_BLUE, cmd, WEXITSTATUS(status), COLOR_RESET);
+			fprintf(stdout, "%s	Program: %s exited, status: %d %s\n",
+				COLOR_BLUE, cmd, WEXITSTATUS(status), COLOR_RESET);
 			status = WEXITSTATUS(status);
 
 		} else if (WIFSIGNALED(status)) {
 
-			fprintf(stdout, "%s	Program: %s killed, status: %d %s\n", COLOR_BLUE, cmd, -WTERMSIG(status), COLOR_RESET);
+			fprintf(stdout, "%s	Program: %s killed, status: %d %s\n",
+				COLOR_BLUE, cmd, -WTERMSIG(status), COLOR_RESET);
 			status = -WTERMSIG(status);
 
 		} else if (WTERMSIG(status)) {
 
-			fprintf(stdout, "%s	Program: %s stopped, status: %d %s\n", COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
+			fprintf(stdout, "%s	Program: %s stopped, status: %d %s\n",
+				COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
 			status = -WSTOPSIG(status);
 		}
 	}
-	
+
 	return 0;
 }
