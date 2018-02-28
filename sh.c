@@ -77,7 +77,7 @@ static char* readline(const char* promt) {
 	memset(buffer, 0, BUFLEN);
 
 	int i = 0;
-	char c = getchar();
+	int c = getchar();
 
 	while (c != END_LINE && c != EOF) {
 
