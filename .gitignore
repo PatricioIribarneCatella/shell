@@ -3,3 +3,4 @@ test/
 *.o
 *.swp
 *.asm
+sh.c~

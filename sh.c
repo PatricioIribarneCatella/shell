@@ -86,12 +86,12 @@ static char* readline(const char* promt) {
 		c = getchar();
 	}
 
-	if (c == END_LINE)
-		buffer[i++] = END_LINE;
+	if (c == EOF)
+		return NULL;
 
 	buffer[i] = END_STRING;
 
-	return (buffer[0] != 0) ? buffer : NULL;
+	return buffer;
 }
 
 // looks in the argument for the 'c' character
@@ -265,10 +265,9 @@ static void runcmd(struct cmd* cmd) {
 	}
 }
 
-int main(int argc, char const *argv[]) {
-
-	pid_t p;
-	char* cmd;
+// initialize the shell
+// with the "HOME" directory
+static void init_shell() {
 
 	char* home = getenv("HOME");
 
@@ -280,6 +279,76 @@ int main(int argc, char const *argv[]) {
 		strcat(promt, home);
 		strcat(promt, ")");
 	}
+}
+
+// prints information of process´ status
+static void print_status_info(int status, char* cmd) {
+	
+	if (WIFEXITED(status)) {
+
+		fprintf(stdout, "%s	Program: %s exited, status: %d %s\n",
+			COLOR_BLUE, cmd, WEXITSTATUS(status), COLOR_RESET);
+		status = WEXITSTATUS(status);
+
+	} else if (WIFSIGNALED(status)) {
+
+		fprintf(stdout, "%s	Program: %s killed, status: %d %s\n",
+			COLOR_BLUE, cmd, -WTERMSIG(status), COLOR_RESET);
+		status = -WTERMSIG(status);
+
+	} else if (WTERMSIG(status)) {
+
+		fprintf(stdout, "%s	Program: %s stopped, status: %d %s\n",
+			COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
+		status = -WSTOPSIG(status);
+	}
+}
+
+// returns true if "chdir" was performed
+static int cd(char* cmd) {
+
+	char* dir;
+
+	if (cmd[0] == 'c' && cmd[1] == 'd' &&
+		(cmd[2] == ' ' || cmd[2] == END_STRING)) {
+
+		if (cmd[2] == END_STRING) {
+			// change to HOME			
+			dir = getenv("HOME");
+		
+		} else if (cmd[2] == ' ' && cmd[3] == '$') {
+			// expand variable and change to it
+			dir = getenv(cmd + 4);
+
+		} else {
+			// change to the arg especified in 'cd'
+			dir = cmd + 3;
+		}
+
+		if (chdir(dir) < 0)
+			fprintf(stderr, "cannot cd to %s. error: %s\n",
+				dir, strerror(errno));
+		else {
+			memset(promt, 0, PRMTLEN);
+			strcat(promt, "(");
+			char* cwd = get_current_dir_name();
+			strcat(promt, cwd);
+			free(cwd);
+			strcat(promt, ")");
+		}
+
+		return 1;
+	}
+
+	return 0;
+}
+
+int main(int argc, char const *argv[]) {
+
+	pid_t p;
+	char* cmd;
+
+	init_shell();
 
 	while ((cmd = readline(promt)) != NULL) {
 
@@ -288,28 +357,13 @@ int main(int argc, char const *argv[]) {
 
 		// if the "enter" key is pressed just
 		// print the promt again
-		if (cmd[0] == END_LINE)
+		if (cmd[0] == END_STRING)
 			continue;
 
-		cmd[strlen(cmd) - 1] = END_STRING; // chop \n
-
-		// chdir has to be called within the father, not the child.
-		if (cmd[0] == 'c' && cmd[1] == 'd' && cmd[2] == ' ') {
-
-			if (chdir(cmd + 3) < 0)
-				fprintf(stderr, "cannot cd to %s. error: %s\n",
-					cmd + 3, strerror(errno));
-			else {
-				memset(promt, 0, PRMTLEN);
-				strcat(promt, "(");
-				char* cwd = get_current_dir_name();
-				strcat(promt, cwd);
-				free(cwd);
-				strcat(promt, ")");
-			}
-
+		// chdir has to be called within the father,
+		// not the child.
+		if (cd(cmd))
 			continue;
-		}
 
 		// exit command must be called in the father
 		if (strcmp(cmd, "exit") == 0)
@@ -335,25 +389,9 @@ int main(int argc, char const *argv[]) {
 		// waits for the process to finish
 		waitpid(p, &status, 0);
 
-		if (WIFEXITED(status)) {
-
-			fprintf(stdout, "%s	Program: %s exited, status: %d %s\n",
-				COLOR_BLUE, cmd, WEXITSTATUS(status), COLOR_RESET);
-			status = WEXITSTATUS(status);
-
-		} else if (WIFSIGNALED(status)) {
-
-			fprintf(stdout, "%s	Program: %s killed, status: %d %s\n",
-				COLOR_BLUE, cmd, -WTERMSIG(status), COLOR_RESET);
-			status = -WTERMSIG(status);
-
-		} else if (WTERMSIG(status)) {
-
-			fprintf(stdout, "%s	Program: %s stopped, status: %d %s\n",
-				COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
-			status = -WSTOPSIG(status);
-		}
+		print_status_info(status, cmd);	
 	}
 
 	return 0;
 }
+
