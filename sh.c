@@ -372,18 +372,15 @@ int main(int argc, char const *argv[]) {
 		// parses the command line
 		struct cmd *parsedCmd = parsecmd(cmd);
 
-		if (parsedCmd->type == BACK) {
-			// forks and run the command
-			if ((back = fork()) == 0) {
-				runcmd(parsedCmd);
-			}
-			// it doesn´t wait for it to finish
-			continue;
-		}
-
 		// forks and run the command
 		if ((p = fork()) == 0) {
 			runcmd(parsedCmd);
+		}
+
+		// doesn´t wait for it to finish
+		if (parsedCmd->type == BACK) {
+			back = p;
+			continue;
 		}
 
 		// waits for the process to finish
