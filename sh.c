@@ -343,6 +343,13 @@ static int cd(char* cmd) {
 	return 0;
 }
 
+// exists nicely
+static void exit_shell(char* cmd) {
+
+	if (strcmp(cmd, "exit") == 0)
+		_exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char const *argv[]) {
 
 	pid_t p;
@@ -366,8 +373,7 @@ int main(int argc, char const *argv[]) {
 			continue;
 
 		// exit command must be called in the father
-		if (strcmp(cmd, "exit") == 0)
-			_exit(EXIT_SUCCESS);
+		exit_shell(cmd);
 
 		// parses the command line
 		struct cmd *parsedCmd = parsecmd(cmd);
