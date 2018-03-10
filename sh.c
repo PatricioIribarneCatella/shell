@@ -49,6 +49,7 @@ struct pipecmd {
 
 int status;
 pid_t back;
+static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
 static char numbers[10] = "0123456789";
@@ -69,7 +70,7 @@ static char* itoa(int val) {
 	return &bufNum[i + 1];
 }
 
-static char* readline(const char* promt) {
+static char* read_line(const char* promt) {
 
 	fprintf(stdout, "%s %s %s\n", COLOR_RED, promt, COLOR_RESET);
 	fprintf(stdout, "%s", "$ ");
@@ -127,7 +128,7 @@ static void getEnvironValue(char* arg, char* value, int idx) {
 	value[j] = END_STRING;
 }
 
-static struct cmd* parsecmd(char* buf) {
+static struct cmd* parse_cmd(char* buf) {
 
 	struct execcmd* cmd = malloc(sizeof(*cmd));
 	memset(cmd, 0, sizeof(*cmd));
@@ -227,7 +228,7 @@ static struct cmd* parsecmd(char* buf) {
 	return (struct cmd*)cmd;
 }
 
-static void runcmd(struct cmd* cmd) {
+static void exec_cmd(struct cmd* cmd) {
 
 	struct execcmd exec;
 	struct execcmd redir;
@@ -247,7 +248,7 @@ static void runcmd(struct cmd* cmd) {
 			// sets the current process group id to 0
 			setpgid(0, 0);
 			cmd->type = EXEC;
-			runcmd(cmd);
+			exec_cmd(cmd);
 			break;
 		}
 
@@ -259,7 +260,7 @@ static void runcmd(struct cmd* cmd) {
 			if (redir.fd_out >= 0)
 				dup2(redir.fd_out, 1);
 			cmd->type = EXEC;
-			runcmd(cmd);
+			exec_cmd(cmd);
 			break;
 		}
 	}
@@ -350,6 +351,11 @@ static void exit_shell(char* cmd) {
 		_exit(EXIT_SUCCESS);
 }
 
+static void run_cmd() {
+
+	
+}
+
 int main(int argc, char const *argv[]) {
 
 	pid_t p;
@@ -357,13 +363,16 @@ int main(int argc, char const *argv[]) {
 
 	init_shell();
 
-	while ((cmd = readline(promt)) != NULL) {
+	while ((cmd = read_line(promt)) != NULL) {
 
+		// if the process in background finished,
+		// print info about it
 		if ((back != 0) && waitpid(back, &status, WNOHANG) > 0)
-			printf("	process %d done\n", back);
+			fprintf(stdout, "%s	process %d done [%s], status: %d %s\n",
+				COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
 
-		// if the "enter" key is pressed just
-		// print the promt again
+		// if the "enter" key is pressed
+		// just print the promt again
 		if (cmd[0] == END_STRING)
 			continue;
 
@@ -376,15 +385,16 @@ int main(int argc, char const *argv[]) {
 		exit_shell(cmd);
 
 		// parses the command line
-		struct cmd *parsedCmd = parsecmd(cmd);
+		struct cmd *parsedCmd = parse_cmd(cmd);
 
 		// forks and run the command
 		if ((p = fork()) == 0) {
-			runcmd(parsedCmd);
+			exec_cmd(parsedCmd);
 		}
 
 		// doesn´t wait for it to finish
 		if (parsedCmd->type == BACK) {
+			strcpy(back_cmd, cmd);
 			back = p;
 			continue;
 		}
