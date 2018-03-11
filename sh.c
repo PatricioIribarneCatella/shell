@@ -257,9 +257,9 @@ static void exec_cmd(struct cmd* cmd) {
 			// changes the input/output flow
 			redir = *(struct execcmd*)cmd;
 			if (redir.fd_in >= 0)
-				dup2(redir.fd_in, 0);
+				dup2(redir.fd_in, STDIN_FILENO);
 			if (redir.fd_out >= 0)
-				dup2(redir.fd_out, 1);
+				dup2(redir.fd_out, STDOUT_FILENO);
 			cmd->type = EXEC;
 			exec_cmd(cmd);
 			break;
