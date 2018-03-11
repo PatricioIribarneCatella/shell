@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
@@ -347,6 +348,12 @@ static int cd(char* cmd) {
 static void run_cmd(char* cmd) {
 	
 	pid_t p;
+	struct cmd *parsed;
+
+	// if the "enter" key is pressed
+	// just print the promt again
+	if (cmd[0] == END_STRING)
+		return;
 	
 	// chdir has to be called within the father,
 	// not the child.
@@ -357,7 +364,7 @@ static void run_cmd(char* cmd) {
 	exit_shell(cmd);
 
 	// parses the command line
-	struct cmd *parsedCmd = parse_cmd(cmd);
+	parsed = parse_cmd(cmd);
 
 	// forks and run the command
 	if ((p = fork()) == 0) {
@@ -365,7 +372,7 @@ static void run_cmd(char* cmd) {
 	}
 
 	// doesn´t wait for it to finish
-	if (parsedCmd->type == BACK) {
+	if (parsed->type == BACK) {
 		strcpy(back_cmd, cmd);
 		back = p;
 		return;
@@ -400,13 +407,8 @@ static void run_shell() {
 		// if the process in background finished,
 		// print info about it
 		print_background_info();
-
-		// if the "enter" key is pressed
-		// just print the promt again
-		if (cmd[0] == END_STRING)
-			continue;
-
-		run_cmd(cmd);		
+		
+		run_cmd(cmd);
 
 		print_status_info(cmd);
 	}
