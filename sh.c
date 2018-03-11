@@ -266,22 +266,6 @@ static void exec_cmd(struct cmd* cmd) {
 	}
 }
 
-// initialize the shell
-// with the "HOME" directory
-static void init_shell() {
-
-	char* home = getenv("HOME");
-
-	if (chdir(home) < 0)
-		fprintf(stderr, "cannot cd to %s. error: %s\n",
-			home, strerror(errno));
-	else {
-		strcat(promt, "(");
-		strcat(promt, home);
-		strcat(promt, ")");
-	}
-}
-
 // prints information of process´ status
 static void print_status_info(char* cmd) {
 	
@@ -389,6 +373,22 @@ static void run_cmd(char* cmd) {
 
 	// waits for the process to finish
 	waitpid(p, &status, 0);
+}
+
+// initialize the shell
+// with the "HOME" directory
+static void init_shell() {
+
+	char* home = getenv("HOME");
+
+	if (chdir(home) < 0)
+		fprintf(stderr, "cannot cd to %s. error: %s\n",
+			home, strerror(errno));
+	else {
+		strcat(promt, "(");
+		strcat(promt, home);
+		strcat(promt, ")");
+	}
 }
 
 static void run_shell() {
