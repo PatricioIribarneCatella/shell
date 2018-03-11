@@ -270,6 +270,9 @@ static void exec_cmd(struct cmd* cmd) {
 // prints information of process´ status
 static void print_status_info(char* cmd) {
 	
+	if (strlen(cmd) == 0)
+		return;
+
 	if (WIFEXITED(status)) {
 
 		fprintf(stdout, "%s	Program: %s exited, status: %d %s\n",
@@ -336,6 +339,7 @@ static int cd(char* cmd) {
 			strcat(promt, cwd);
 			free(cwd);
 			strcat(promt, ")");
+			status = 0;
 		}
 
 		return 1;
@@ -368,7 +372,7 @@ static void run_cmd(char* cmd) {
 
 	// forks and run the command
 	if ((p = fork()) == 0) {
-		exec_cmd(parsedCmd);
+		exec_cmd(parsed);
 	}
 
 	// doesn´t wait for it to finish
