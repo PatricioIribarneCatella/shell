@@ -283,7 +283,7 @@ static void init_shell() {
 }
 
 // prints information of process´ status
-static void print_status_info(int status, char* cmd) {
+static void print_status_info(char* cmd) {
 	
 	if (WIFEXITED(status)) {
 
@@ -303,6 +303,21 @@ static void print_status_info(int status, char* cmd) {
 			COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
 		status = -WSTOPSIG(status);
 	}
+}
+
+// prints information of background process´ status
+static void print_background_info() {
+	
+	if ((back != 0) && waitpid(back, &status, WNOHANG) > 0)
+		fprintf(stdout, "%s	process %d done [%s], status: %d %s\n",
+			COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
+}
+
+// exists nicely
+static void exit_shell(char* cmd) {
+
+	if (strcmp(cmd, "exit") == 0)
+		_exit(EXIT_SUCCESS);
 }
 
 // returns true if "chdir" was performed
@@ -344,67 +359,65 @@ static int cd(char* cmd) {
 	return 0;
 }
 
-// exists nicely
-static void exit_shell(char* cmd) {
-
-	if (strcmp(cmd, "exit") == 0)
-		_exit(EXIT_SUCCESS);
-}
-
-static void run_cmd() {
-
+// runs the command in 'cmd'
+static void run_cmd(char* cmd) {
 	
+	pid_t p;
+	
+	// chdir has to be called within the father,
+	// not the child.
+	if (cd(cmd))
+		return;
+
+	// exit command must be called in the father
+	exit_shell(cmd);
+
+	// parses the command line
+	struct cmd *parsedCmd = parse_cmd(cmd);
+
+	// forks and run the command
+	if ((p = fork()) == 0) {
+		exec_cmd(parsedCmd);
+	}
+
+	// doesn´t wait for it to finish
+	if (parsedCmd->type == BACK) {
+		strcpy(back_cmd, cmd);
+		back = p;
+		return;
+	}
+
+	// waits for the process to finish
+	waitpid(p, &status, 0);
 }
 
-int main(int argc, char const *argv[]) {
+static void run_shell() {
 
-	pid_t p;
 	char* cmd;
-
-	init_shell();
 
 	while ((cmd = read_line(promt)) != NULL) {
 
 		// if the process in background finished,
 		// print info about it
-		if ((back != 0) && waitpid(back, &status, WNOHANG) > 0)
-			fprintf(stdout, "%s	process %d done [%s], status: %d %s\n",
-				COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
+		print_background_info();
 
 		// if the "enter" key is pressed
 		// just print the promt again
 		if (cmd[0] == END_STRING)
 			continue;
 
-		// chdir has to be called within the father,
-		// not the child.
-		if (cd(cmd))
-			continue;
+		run_cmd(cmd);		
 
-		// exit command must be called in the father
-		exit_shell(cmd);
-
-		// parses the command line
-		struct cmd *parsedCmd = parse_cmd(cmd);
-
-		// forks and run the command
-		if ((p = fork()) == 0) {
-			exec_cmd(parsedCmd);
-		}
-
-		// doesn´t wait for it to finish
-		if (parsedCmd->type == BACK) {
-			strcpy(back_cmd, cmd);
-			back = p;
-			continue;
-		}
-
-		// waits for the process to finish
-		waitpid(p, &status, 0);
-
-		print_status_info(status, cmd);	
+		print_status_info(cmd);
 	}
+}
 
+int main(int argc, char const *argv[]) {
+
+	init_shell();
+
+	run_shell();
+	
 	return 0;
 }
 
