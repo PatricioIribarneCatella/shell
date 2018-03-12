@@ -129,7 +129,7 @@ static void getEnvironValue(char* arg, char* value, int idx) {
 	value[j] = END_STRING;
 }
 
-static struct cmd* parse_cmd(char* buf) {
+static struct cmd* parse_line(char* buf) {
 
 	struct execcmd* cmd = malloc(sizeof(*cmd));
 	memset(cmd, 0, sizeof(*cmd));
@@ -368,12 +368,11 @@ static void run_cmd(char* cmd) {
 	exit_shell(cmd);
 
 	// parses the command line
-	parsed = parse_cmd(cmd);
+	parsed = parse_line(cmd);
 
 	// forks and run the command
-	if ((p = fork()) == 0) {
+	if ((p = fork()) == 0)
 		exec_cmd(parsed);
-	}
 
 	// doesn´t wait for it to finish
 	if (parsed->type == BACK) {
@@ -384,22 +383,6 @@ static void run_cmd(char* cmd) {
 
 	// waits for the process to finish
 	waitpid(p, &status, 0);
-}
-
-// initialize the shell
-// with the "HOME" directory
-static void init_shell() {
-
-	char* home = getenv("HOME");
-
-	if (chdir(home) < 0)
-		fprintf(stderr, "cannot cd to %s. error: %s\n",
-			home, strerror(errno));
-	else {
-		strcat(promt, "(");
-		strcat(promt, home);
-		strcat(promt, ")");
-	}
 }
 
 static void run_shell() {
@@ -415,6 +398,22 @@ static void run_shell() {
 		run_cmd(cmd);
 
 		print_status_info(cmd);
+	}
+}
+
+// initialize the shell
+// with the "HOME" directory
+static void init_shell() {
+
+	char* home = getenv("HOME");
+
+	if (chdir(home) < 0)
+		fprintf(stderr, "cannot cd to %s. error: %s\n",
+			home, strerror(errno));
+	else {
+		strcat(promt, "(");
+		strcat(promt, home);
+		strcat(promt, ")");
 	}
 }
 
