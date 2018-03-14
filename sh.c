@@ -30,6 +30,10 @@
 #define REDIR 3
 #define PIPE 4
 
+// Fd for pipes
+#define READ 0
+#define WRITE 1
+
 struct cmd {
 	int type;
 };
@@ -69,202 +73,6 @@ static char* itoa(int val) {
 	}
 
 	return &bufNum[i + 1];
-}
-
-static char* read_line(const char* promt) {
-
-	fprintf(stdout, "%s %s %s\n", COLOR_RED, promt, COLOR_RESET);
-	fprintf(stdout, "%s", "$ ");
-
-	memset(buffer, 0, BUFLEN);
-
-	int i = 0;
-	int c = getchar();
-
-	while (c != END_LINE && c != EOF) {
-
-		buffer[i++] = c;
-
-		c = getchar();
-	}
-
-	if (c == EOF)
-		return NULL;
-
-	buffer[i] = END_STRING;
-
-	return buffer;
-}
-
-// looks in the argument for the 'c' character
-// and returns the index in which it is, or -1
-// in other case
-static int argContains(char* arg, char c) {
-
-	for (int i = 0; i < strlen(arg); i++)
-		if (arg[i] == c)
-			return i;
-	return -1;
-}
-
-// sets the "key" argument with the key part of
-// the "arg" argument and null-terminates it
-static void getEnvironKey(char* arg, char* key) {
-
-	int i;
-	for (i = 0; arg[i] != '='; i++)
-		key[i] = arg[i];
-
-	key[i] = END_STRING;
-}
-
-// sets the "value" argument with the value part of
-// the "arg" argument and null-terminates it
-static void getEnvironValue(char* arg, char* value, int idx) {
-
-	int i, j;
-	for (i = (idx + 1), j = 0; i < strlen(arg); i++, j++)
-		value[j] = arg[i];
-
-	value[j] = END_STRING;
-}
-
-static struct cmd* parse_line(char* buf) {
-
-	struct execcmd* cmd = malloc(sizeof(*cmd));
-	memset(cmd, 0, sizeof(*cmd));
-
-	cmd->fd_in = -1;
-	cmd->fd_out = -1;
-	cmd->type = EXEC;
-
-	int fd, idx,
-		equalIndex, redirOutputIndex, redirInputIndex,
-		argc = 0, i = 0;
-
-	while (buf[i] != END_STRING) {
-
-		if (buf[i] == '&') {
-			// run a process in background
-			cmd->type = BACK;
-			i++;
-		} else {
-			char* arg = malloc(ARGSIZE);
-			memset(arg, 0, ARGSIZE);
-			idx = 0;
-
-			while (buf[i] != SPACE && buf[i] != END_STRING) {
-				arg[idx] = buf[i];
-				i++; idx++;
-			}
-
-			i++; // goes to the next argument
-
-			// flow redirection for output
-			if ((redirOutputIndex = argContains(arg, '>')) >= 0) {
-
-				if ((fd = open(arg + redirOutputIndex + 1,
-						O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
-						S_IRUSR | S_IWUSR)) < 0)
-					fprintf(stderr, "Cannot open redir file at: %s. error: %s",
-							arg + redirOutputIndex + 1, strerror(errno));
-				else {
-					cmd->fd_out = fd;
-					cmd->type = REDIR;
-				}
-
-				continue;
-			}
-
-			// flow redirection for input
-			if ((redirInputIndex = argContains(arg, '<')) >= 0) {
-
-				if ((fd = open(arg + redirInputIndex + 1,
-						O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
-						S_IRUSR | S_IWUSR)) < 0)
-					fprintf(stderr, "Cannot open redir file at: %s. error: %s",
-							arg + redirInputIndex + 1, strerror(errno));
-				else {
-					cmd->fd_in = fd;
-					cmd->type = REDIR;
-				}
-
-				continue;
-
-			}
-
-			// sets environment variables apart from the
-			// ones defined in the global variable "environ"
-			if ((equalIndex = argContains(arg, '=')) > 0) {
-
-				char key[50], value[50];
-
-				getEnvironKey(arg, key);
-				getEnvironValue(arg, value, equalIndex);
-
-				setenv(key, value, 1);
-
-				continue;
-			}
-
-			// expand environment variables
-			if (arg[0] == '$') {
-
-				char* aux = arg;
-
-				if (arg[1] == '?')
-					arg = itoa(status);
-				else
-					arg = getenv(arg + 1);
-
-				free(aux);
-			}
-
-			cmd->argv[argc++] = arg;
-		}
-	}
-
-	cmd->argv[argc] = (char*)NULL;
-
-	return (struct cmd*)cmd;
-}
-
-static void exec_cmd(struct cmd* cmd) {
-
-	struct execcmd exec;
-	struct execcmd redir;
-
-	switch (cmd->type) {
-
-		case EXEC:
-			exec = *(struct execcmd*)cmd;
-			free(cmd);
-			execvp(exec.argv[0], exec.argv);
-			fprintf(stderr, "cannot exec %s. error: %s\n",
-				exec.argv[0], strerror(errno));
-			_exit(EXIT_FAILURE);
-			break;
-
-		case BACK: {
-			// sets the current process group id to 0
-			setpgid(0, 0);
-			cmd->type = EXEC;
-			exec_cmd(cmd);
-			break;
-		}
-
-		case REDIR: {
-			// changes the input/output flow
-			redir = *(struct execcmd*)cmd;
-			if (redir.fd_in >= 0)
-				dup2(redir.fd_in, STDIN_FILENO);
-			if (redir.fd_out >= 0)
-				dup2(redir.fd_out, STDOUT_FILENO);
-			cmd->type = EXEC;
-			exec_cmd(cmd);
-			break;
-		}
-	}
 }
 
 // prints information of process´ status
@@ -346,6 +154,319 @@ static int cd(char* cmd) {
 	}
 
 	return 0;
+}
+
+static char* read_line(const char* promt) {
+
+	fprintf(stdout, "%s %s %s\n", COLOR_RED, promt, COLOR_RESET);
+	fprintf(stdout, "%s", "$ ");
+
+	memset(buffer, 0, BUFLEN);
+
+	int i = 0;
+	int c = getchar();
+
+	while (c != END_LINE && c != EOF) {
+
+		buffer[i++] = c;
+
+		c = getchar();
+	}
+
+	if (c == EOF)
+		return NULL;
+
+	buffer[i] = END_STRING;
+
+	return buffer;
+}
+
+// sets the "key" argument with the key part of
+// the "arg" argument and null-terminates it
+static void get_environ_key(char* arg, char* key) {
+
+	int i;
+	for (i = 0; arg[i] != '='; i++)
+		key[i] = arg[i];
+
+	key[i] = END_STRING;
+}
+
+// sets the "value" argument with the value part of
+// the "arg" argument and null-terminates it
+static void get_environ_value(char* arg, char* value, int idx) {
+
+	int i, j;
+	for (i = (idx + 1), j = 0; i < strlen(arg); i++, j++)
+		value[j] = arg[i];
+
+	value[j] = END_STRING;
+}
+
+static void exec_cmd(struct cmd* cmd) {
+
+	struct execcmd exec;
+	struct execcmd redir;
+	struct pipecmd pipe_cmd;
+	int p[2];
+
+	switch (cmd->type) {
+
+		case EXEC:
+			exec = *(struct execcmd*)cmd;
+			free(cmd);
+			execvp(exec.argv[0], exec.argv);
+			fprintf(stderr, "cannot exec %s. error: %s\n",
+				exec.argv[0], strerror(errno));
+			_exit(EXIT_FAILURE);
+			break;
+
+		case BACK: {
+			// sets the current process group id to 0
+			setpgid(0, 0);
+			cmd->type = EXEC;
+			exec_cmd(cmd);
+			break;
+		}
+
+		case REDIR: {
+			// changes the input/output flow
+			redir = *(struct execcmd*)cmd;
+			if (redir.fd_in >= 0)
+				dup2(redir.fd_in, STDIN_FILENO);
+			if (redir.fd_out >= 0)
+				dup2(redir.fd_out, STDOUT_FILENO);
+			cmd->type = EXEC;
+			exec_cmd(cmd);
+			break;
+		}
+		
+		case PIPE: {
+			// pipes two commands
+			pipe_cmd = *(struct pipecmd*)cmd;
+			if (pipe(p) < 0) {
+				fprintf(stderr, "pipe creation failed. error: %s\n",
+					strerror(errno));
+				_exit(EXIT_FAILURE);
+			}
+			if (fork() == 0) {
+				dup2(p[WRITE], STDOUT_FILENO);
+				close(p[READ]);
+				close(p[WRITE]);
+				exec_cmd(pipe_cmd.leftcmd);
+			}
+			if (fork() == 0) {
+				dup2(p[READ], STDIN_FILENO);
+				close(p[READ]);
+				close(p[WRITE]);
+				exec_cmd(pipe_cmd.rightcmd);
+			}
+			close(p[READ]);
+			close(p[WRITE]);
+			wait(NULL);
+			wait(NULL);
+			break;
+		}
+	}
+}
+
+static char* get_arg(char* buf, int idx) {
+
+	char* arg = malloc(ARGSIZE);
+	memset(arg, 0, ARGSIZE);
+	int i = 0;
+
+	while (buf[idx] != SPACE && buf[idx] != END_STRING) {
+		arg[i] = buf[idx];
+		i++; idx++;
+	}
+
+	return arg;
+}
+
+static int open_redir_fd(char* file) {
+
+	int fd;
+
+	fd = open(file,
+			O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
+			S_IRUSR | S_IWUSR);
+
+	return fd;
+}
+
+// looks in a block for the 'c' character
+// and returns the index in which it is, or -1
+// in other case
+static int block_contains(char* buf, char c) {
+
+	for (int i = 0; i < strlen(buf); i++)
+		if (buf[i] == c)
+			return i;
+	
+	return -1;
+}
+
+static void redir_flow(struct execcmd* c, char* arg) {
+
+	int fd, redirInputIndex, redirOutputIndex;
+
+	// flow redirection for output
+	if ((redirOutputIndex = block_contains(arg, '>')) >= 0)
+		if ((fd = open_redir_fd(arg + redirOutputIndex + 1)) < 0)
+			fprintf(stderr, "Cannot open redir file at: %s. error: %s",
+					arg + redirOutputIndex + 1, strerror(errno));
+
+	// flow redirection for input
+	if ((redirInputIndex = block_contains(arg, '<')) >= 0)
+		if ((fd = open_redir_fd(arg + redirInputIndex + 1)) < 0)
+			fprintf(stderr, "Cannot open redir file at: %s. error: %s",
+					arg + redirInputIndex + 1, strerror(errno));
+	
+	c->fd_out = fd;
+	c->type = REDIR;
+}
+
+static void set_environ_var(char* arg) {
+
+	int equalIndex;
+
+	// sets environment variables apart from the
+	// ones defined in the global variable "environ"
+	if ((equalIndex = block_contains(arg, '=')) > 0) {
+
+		char key[50], value[50];
+
+		get_environ_key(arg, key);
+		get_environ_value(arg, value, equalIndex);
+
+		setenv(key, value, 1);
+	}
+}
+
+static void expand_environ_var(char* arg) {
+
+	// expand environment variables
+	if (arg[0] == '$') {
+
+		char* aux = arg;
+
+		if (arg[1] == '?')
+			arg = itoa(status);
+		else
+			arg = getenv(arg + 1);
+
+		free(aux);
+	}
+}
+
+static struct cmd* exec_cmd_create(int back) {
+
+	struct execcmd* e = malloc(sizeof(*e));
+	memset(e, 0, sizeof(*e));
+
+	e->fd_in = -1;
+	e->fd_out = -1;
+	e->type = EXEC;
+	
+	if (back)
+		e->type = BACK;
+	
+	return (struct cmd*)e;
+}
+
+static struct cmd* parse_exec(char* buf_cmd, int back) {
+
+	struct execcmd* c;
+	char* arg;
+	int idx = 0, argc = 0;
+	
+	c = (struct execcmd*)exec_cmd_create(back);
+	
+	while (buf_cmd[idx] != END_STRING) {
+	
+		arg = get_arg(buf_cmd, idx);
+		printf("arg: %s\n", arg);
+		idx = idx + (strlen(arg) + 1);
+		
+		redir_flow(c, arg);
+		
+		set_environ_var(arg);
+		
+		expand_environ_var(arg);
+		
+		c->argv[argc++] = arg;
+	}
+	
+	c->argv[argc] = (char*)NULL;
+	
+	return (struct cmd*)c;
+}
+
+static struct cmd* parse_back(char* buf_cmd) {
+
+	int i = 0;
+
+	while (buf_cmd[i] != '&')
+		i++;
+	
+	buf_cmd[i] = END_STRING;
+	
+	return parse_exec(buf_cmd, 1);
+}
+
+static struct cmd* parse_cmd(char* buf_cmd) {
+
+	if (strlen(buf_cmd) == 0)
+		return NULL;
+
+	if (block_contains(buf_cmd, '&'))
+		return parse_back(buf_cmd);
+		
+	return parse_exec(buf_cmd, 0);
+}
+
+static struct cmd* pipe_cmd_create(struct cmd* left, struct cmd* right) {
+
+	if (!right)
+		return left;
+	
+	struct pipecmd* p = malloc(sizeof(*p));
+	memset(p, 0, sizeof(*p));
+	
+	p->type = PIPE;
+	p->leftcmd = left;
+	p->rightcmd = right;
+	
+	return (struct cmd*)p;
+}
+
+static void split_line(char* buf, char* r, char* l, char splitter) {
+
+	int i = 0, j = 0;
+
+	while (buf[i] != splitter &&
+			buf[i] != END_STRING) {
+		l[i] = buf[i];
+		i++;
+	}
+		
+	while (buf[i] != END_STRING)
+		r[j++] = buf[i++];
+}
+
+static struct cmd* parse_line(char* buf) {
+
+	char right[BUFLEN], left[BUFLEN];
+	
+	memset(&right, END_STRING, BUFLEN);
+	memset(&left, END_STRING, BUFLEN);
+	
+	split_line(buf, right, left, '|');
+	printf("right: %s\n", right);
+	printf("left: %s\n", left);
+	
+	return pipe_cmd_create(parse_cmd(left), parse_cmd(right));
 }
 
 // runs the command in 'cmd'
