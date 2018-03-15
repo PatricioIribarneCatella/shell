@@ -378,10 +378,10 @@ static bool set_environ_var(char* arg) {
 		get_environ_key(arg, key);
 		get_environ_value(arg, value, equalIndex);
 		
-		if (block_contains(key, '-') < 0)
+		if (block_contains(key, '-') < 0) {
 			setenv(key, value, 1);
-		
-		return true;
+			return true;
+		}
 	}
 	
 	return false;
