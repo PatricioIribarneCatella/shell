@@ -57,6 +57,8 @@ pid_t back;
 static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
+//static char right[BUFLEN];
+//static char left[BUFLEN];
 static char numbers[10] = "0123456789";
 static char bufNum[32];
 
@@ -386,8 +388,11 @@ static struct cmd* parse_exec(char* buf_cmd, int back) {
 	while (buf_cmd[idx] != END_STRING) {
 	
 		arg = get_arg(buf_cmd, idx);
-		printf("arg: %s\n", arg);
-		idx = idx + (strlen(arg) + 1);
+		//printf("arg: %s\n", arg);
+		idx = idx + strlen(arg);
+		
+		if (buf_cmd[idx] != END_STRING)
+			idx++;
 		
 		redir_flow(c, arg);
 		
@@ -420,7 +425,7 @@ static struct cmd* parse_cmd(char* buf_cmd) {
 	if (strlen(buf_cmd) == 0)
 		return NULL;
 
-	if (block_contains(buf_cmd, '&'))
+	if (block_contains(buf_cmd, '&') >= 0)
 		return parse_back(buf_cmd);
 		
 	return parse_exec(buf_cmd, 0);
@@ -441,32 +446,28 @@ static struct cmd* pipe_cmd_create(struct cmd* left, struct cmd* right) {
 	return (struct cmd*)p;
 }
 
-static void split_line(char* buf, char* r, char* l, char splitter) {
+static char* split_line(char* buf, char splitter) {
 
-	int i = 0, j = 0;
+	int i = 0;
 
 	while (buf[i] != splitter &&
-			buf[i] != END_STRING) {
-		l[i] = buf[i];
+			buf[i] != END_STRING)
 		i++;
-	}
 		
-	while (buf[i] != END_STRING)
-		r[j++] = buf[i++];
+	buf[i] = END_STRING;
+	
+	return &buf[i++];
 }
 
 static struct cmd* parse_line(char* buf) {
-
-	char right[BUFLEN], left[BUFLEN];
 	
-	memset(&right, END_STRING, BUFLEN);
-	memset(&left, END_STRING, BUFLEN);
+	char* right = split_line(buf, '|');
+	//printf("right: %s\n", right);
+	//printf("left: %s\n", buf);
+	struct cmd* l = parse_cmd(buf);
+	struct cmd* r = parse_cmd(right);
 	
-	split_line(buf, right, left, '|');
-	printf("right: %s\n", right);
-	printf("left: %s\n", left);
-	
-	return pipe_cmd_create(parse_cmd(left), parse_cmd(right));
+	return pipe_cmd_create(l, r);
 }
 
 // runs the command in 'cmd'
