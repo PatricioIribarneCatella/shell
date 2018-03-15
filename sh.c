@@ -484,14 +484,20 @@ static char* split_line(char* buf, char splitter) {
 			buf[i] != END_STRING)
 		i++;
 		
-	buf[i] = END_STRING;
+	buf[i++] = END_STRING;
 	
-	return &buf[i++];
+	while (buf[i] == SPACE)
+		i++;
+	
+	return &buf[i];
 }
 
 static struct cmd* parse_line(char* buf) {
 	
 	char* right = split_line(buf, '|');
+	
+	printf("%s\n", buf);
+	printf("%s\n", right);
 	
 	struct cmd* l = parse_cmd(buf);
 	struct cmd* r = parse_cmd(right);
