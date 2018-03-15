@@ -309,27 +309,37 @@ static int block_contains(char* buf, char c) {
 	return -1;
 }
 
-static void redir_flow(struct execcmd* c, char* arg) {
+static bool redir_flow(struct execcmd* c, char* arg) {
 
-	int fd, redirInputIndex, redirOutputIndex;
+	int fd, inIdx, outIdx;
 
 	// flow redirection for output
-	if ((redirOutputIndex = block_contains(arg, '>')) >= 0)
-		if ((fd = open_redir_fd(arg + redirOutputIndex + 1)) < 0)
+	if ((outIdx = block_contains(arg, '>')) >= 0) {
+	
+		if ((fd = open_redir_fd(arg + outIdx + 1)) < 0)
 			fprintf(stderr, "Cannot open redir file at: %s. error: %s",
-					arg + redirOutputIndex + 1, strerror(errno));
+					arg + outIdx + 1, strerror(errno));
+		else
+			c->fd_out = fd;
+	} else
+		return false;
 
 	// flow redirection for input
-	if ((redirInputIndex = block_contains(arg, '<')) >= 0)
-		if ((fd = open_redir_fd(arg + redirInputIndex + 1)) < 0)
+	if ((inIdx = block_contains(arg, '<')) >= 0) {
+		
+		if ((fd = open_redir_fd(arg + inIdx + 1)) < 0)
 			fprintf(stderr, "Cannot open redir file at: %s. error: %s",
-					arg + redirInputIndex + 1, strerror(errno));
+					arg + inIdx + 1, strerror(errno));
+		else
+			c->fd_in = fd;
+	} else
+		return false;
 	
-	c->fd_out = fd;
 	c->type = REDIR;
+	return true;
 }
 
-static void set_environ_var(char* arg) {
+static bool set_environ_var(char* arg) {
 
 	int equalIndex;
 
@@ -343,10 +353,14 @@ static void set_environ_var(char* arg) {
 		get_environ_value(arg, value, equalIndex);
 
 		setenv(key, value, 1);
+		
+		return true;
 	}
+	
+	return false;
 }
 
-static void expand_environ_var(char* arg) {
+static char* expand_environ_var(char* arg) {
 
 	// expand environment variables
 	if (arg[0] == '$') {
@@ -360,6 +374,8 @@ static void expand_environ_var(char* arg) {
 
 		free(aux);
 	}
+	
+	return arg;
 }
 
 static struct cmd* exec_cmd_create(int back) {
@@ -388,17 +404,18 @@ static struct cmd* parse_exec(char* buf_cmd, int back) {
 	while (buf_cmd[idx] != END_STRING) {
 	
 		arg = get_arg(buf_cmd, idx);
-		//printf("arg: %s\n", arg);
 		idx = idx + strlen(arg);
 		
 		if (buf_cmd[idx] != END_STRING)
 			idx++;
 		
-		redir_flow(c, arg);
+		arg = expand_environ_var(arg);
 		
-		set_environ_var(arg);
+		if (redir_flow(c, arg))
+			continue;
 		
-		expand_environ_var(arg);
+		if (set_environ_var(arg))
+			continue;
 		
 		c->argv[argc++] = arg;
 	}
@@ -462,8 +479,7 @@ static char* split_line(char* buf, char splitter) {
 static struct cmd* parse_line(char* buf) {
 	
 	char* right = split_line(buf, '|');
-	//printf("right: %s\n", right);
-	//printf("left: %s\n", buf);
+	
 	struct cmd* l = parse_cmd(buf);
 	struct cmd* r = parse_cmd(right);
 	
