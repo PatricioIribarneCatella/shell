@@ -34,6 +34,8 @@
 #define READ 0
 #define WRITE 1
 
+/* Commands definition types */
+
 struct cmd {
 	int type;
 };
@@ -52,15 +54,19 @@ struct pipecmd {
 	struct cmd* rightcmd;
 };
 
+/* Global variables */
+
 int status;
 pid_t back;
+
 static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
-//static char right[BUFLEN];
-//static char left[BUFLEN];
+
 static char numbers[10] = "0123456789";
 static char bufNum[32];
+
+/* Auxiliar function - itoa */
 
 static char* itoa(int val) {
 
@@ -158,6 +164,8 @@ static int cd(char* cmd) {
 	return 0;
 }
 
+// read a line from the standar input
+// and prints the prompt
 static char* read_line(const char* promt) {
 
 	fprintf(stdout, "%s %s %s\n", COLOR_RED, promt, COLOR_RESET);
@@ -205,6 +213,7 @@ static void get_environ_value(char* arg, char* value, int idx) {
 	value[j] = END_STRING;
 }
 
+// executes a command - does not return
 static void exec_cmd(struct cmd* cmd) {
 
 	struct execcmd exec;
