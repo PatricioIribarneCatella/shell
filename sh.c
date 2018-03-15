@@ -226,7 +226,9 @@ static void exec_cmd(struct cmd* cmd) {
 		case EXEC:
 			exec = *(struct execcmd*)cmd;
 			free(cmd);
+			
 			execvp(exec.argv[0], exec.argv);
+			
 			fprintf(stderr, "cannot exec %s. error: %s\n",
 				exec.argv[0], strerror(errno));
 			_exit(EXIT_FAILURE);
@@ -236,6 +238,7 @@ static void exec_cmd(struct cmd* cmd) {
 			// sets the current process group id to 0
 			setpgid(0, 0);
 			cmd->type = EXEC;
+			
 			exec_cmd(cmd);
 			break;
 		}
@@ -243,10 +246,13 @@ static void exec_cmd(struct cmd* cmd) {
 		case REDIR: {
 			// changes the input/output flow
 			redir = *(struct execcmd*)cmd;
+			
 			if (redir.fd_in >= 0)
 				dup2(redir.fd_in, STDIN_FILENO);
+			
 			if (redir.fd_out >= 0)
 				dup2(redir.fd_out, STDOUT_FILENO);
+			
 			cmd->type = EXEC;
 			exec_cmd(cmd);
 			break;
@@ -255,27 +261,35 @@ static void exec_cmd(struct cmd* cmd) {
 		case PIPE: {
 			// pipes two commands
 			pipe_cmd = *(struct pipecmd*)cmd;
+			free(cmd);
+			
 			if (pipe(p) < 0) {
 				fprintf(stderr, "pipe creation failed. error: %s\n",
 					strerror(errno));
 				_exit(EXIT_FAILURE);
 			}
+			
 			if (fork() == 0) {
 				dup2(p[WRITE], STDOUT_FILENO);
 				close(p[READ]);
 				close(p[WRITE]);
 				exec_cmd(pipe_cmd.leftcmd);
 			}
+			
 			if (fork() == 0) {
 				dup2(p[READ], STDIN_FILENO);
 				close(p[READ]);
 				close(p[WRITE]);
 				exec_cmd(pipe_cmd.rightcmd);
 			}
+			
 			close(p[READ]);
 			close(p[WRITE]);
+			
 			wait(NULL);
 			wait(NULL);
+			
+			_exit(EXIT_SUCCESS);
 			break;
 		}
 	}
@@ -495,9 +509,6 @@ static char* split_line(char* buf, char splitter) {
 static struct cmd* parse_line(char* buf) {
 	
 	char* right = split_line(buf, '|');
-	
-	printf("%s\n", buf);
-	printf("%s\n", right);
 	
 	struct cmd* l = parse_cmd(buf);
 	struct cmd* r = parse_cmd(right);
