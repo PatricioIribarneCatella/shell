@@ -551,6 +551,9 @@ static void run_cmd(char* cmd) {
 
 	// waits for the process to finish
 	waitpid(p, &status, 0);
+	
+	if (parsed->type != PIPE)
+		print_status_info(cmd);
 }
 
 static void run_shell() {
@@ -564,8 +567,6 @@ static void run_shell() {
 		print_background_info();
 		
 		run_cmd(cmd);
-
-		print_status_info(cmd);
 	}
 }
 
