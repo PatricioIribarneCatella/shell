@@ -319,10 +319,12 @@ static bool redir_flow(struct execcmd* c, char* arg) {
 		if ((fd = open_redir_fd(arg + outIdx + 1)) < 0)
 			fprintf(stderr, "Cannot open redir file at: %s. error: %s",
 					arg + outIdx + 1, strerror(errno));
-		else
+		else {
 			c->fd_out = fd;
-	} else
-		return false;
+			c->type = REDIR;
+			return true;
+		}
+	}
 
 	// flow redirection for input
 	if ((inIdx = block_contains(arg, '<')) >= 0) {
@@ -330,13 +332,14 @@ static bool redir_flow(struct execcmd* c, char* arg) {
 		if ((fd = open_redir_fd(arg + inIdx + 1)) < 0)
 			fprintf(stderr, "Cannot open redir file at: %s. error: %s",
 					arg + inIdx + 1, strerror(errno));
-		else
+		else {
 			c->fd_in = fd;
-	} else
-		return false;
+			c->type = REDIR;
+			return true;
+		}
+	}
 	
-	c->type = REDIR;
-	return true;
+	return false;
 }
 
 static bool set_environ_var(char* arg) {
@@ -351,8 +354,9 @@ static bool set_environ_var(char* arg) {
 
 		get_environ_key(arg, key);
 		get_environ_value(arg, value, equalIndex);
-
-		setenv(key, value, 1);
+		
+		if (block_contains(key, '-') < 0)
+			setenv(key, value, 1);
 		
 		return true;
 	}
