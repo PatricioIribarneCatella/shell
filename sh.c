@@ -42,8 +42,9 @@ struct cmd {
 
 struct execcmd {
 	int type;
-	int fd_in;
-	int fd_out;
+	char* out_file;
+	char* in_file;
+	char* err_file;
 	char* argv[MAXARGS];
 	char* eargv[MAXARGS];
 };
@@ -62,7 +63,6 @@ pid_t back;
 static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
-static char STDOUT[] = "stdout";
 
 static char numbers[10] = "0123456789";
 static char bufNum[32];
@@ -214,6 +214,17 @@ static void get_environ_value(char* arg, char* value, int idx) {
 	value[j] = END_STRING;
 }
 
+static int open_redir_fd(char* file) {
+
+	int fd;
+
+	fd = open(file,
+			O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
+			S_IRUSR | S_IWUSR);
+
+	return fd;
+}
+
 // executes a command - does not return
 static void exec_cmd(struct cmd* cmd) {
 
@@ -247,12 +258,40 @@ static void exec_cmd(struct cmd* cmd) {
 		case REDIR: {
 			// changes the input/output flow
 			redir = *(struct execcmd*)cmd;
+			int fd_in, fd_out, fd_err;
 			
-			if (redir.fd_in >= 0)
-				dup2(redir.fd_in, STDIN_FILENO);
+			if (redir.in_file) {
+				if ((fd_in = open_redir_fd(redir.in_file)) < 0) {
+					fprintf(stderr, "cannot open file: %s. error: %s\n",
+						redir.in_file, strerror(errno));
+					_exit(EXIT_FAILURE);
+				}
+				if (fd_in >= 0)
+					dup2(fd_in, STDIN_FILENO);
+			}
 			
-			if (redir.fd_out >= 0)
-				dup2(redir.fd_out, STDOUT_FILENO);
+			if (redir.out_file) {
+				if ((fd_out = open_redir_fd(redir.out_file)) < 0) {
+					fprintf(stderr, "cannot open file: %s. error: %s\n",
+						redir.out_file, strerror(errno));
+					_exit(EXIT_FAILURE);
+				}
+				if (fd_out >= 0)
+					dup2(fd_out, STDOUT_FILENO);
+			}
+
+			if (redir.err_file) {
+				if (strcmp(redir.err_file, "&1") == 0) {
+					fd_err = STDOUT_FILENO;
+				}
+				else if ((fd_err = open_redir_fd(redir.err_file)) < 0) {
+					fprintf(stderr, "cannot open file: %s. error: %s\n",
+						redir.err_file, strerror(errno));
+					_exit(EXIT_FAILURE);
+				}
+				if (fd_err >= 0)
+					dup2(fd_err, STDERR_FILENO);
+			}
 			
 			cmd->type = EXEC;
 			exec_cmd(cmd);
@@ -310,17 +349,6 @@ static char* get_arg(char* buf, int idx) {
 	return arg;
 }
 
-static int open_redir_fd(char* file) {
-
-	int fd;
-
-	fd = open(file,
-			O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
-			S_IRUSR | S_IWUSR);
-
-	return fd;
-}
-
 // looks in a block for the 'c' character
 // and returns the index in which it is, or -1
 // in other case
@@ -335,32 +363,32 @@ static int block_contains(char* buf, char c) {
 
 static bool redir_flow(struct execcmd* c, char* arg) {
 
-	int fd, inIdx, outIdx;
+	int inIdx, outIdx;
 
 	// flow redirection for output
 	if ((outIdx = block_contains(arg, '>')) >= 0) {
-	
-		if ((fd = open_redir_fd(arg + outIdx + 1)) < 0)
-			fprintf(stderr, "Cannot open redir file at: %s. error: %s",
-					arg + outIdx + 1, strerror(errno));
-		else {
-			c->fd_out = fd;
-			c->type = REDIR;
-			return true;
+		switch (outIdx) {
+			// stdout redir
+			case 0: {
+				c->out_file = arg + 1;
+				break;
+			}
+			// stderr redir
+			case 1: {
+				c->err_file = &arg[outIdx + 1];
+				break;
+			}
 		}
+		c->type = REDIR;
+		return true;
 	}
-
+	
 	// flow redirection for input
 	if ((inIdx = block_contains(arg, '<')) >= 0) {
-		
-		if ((fd = open_redir_fd(arg + inIdx + 1)) < 0)
-			fprintf(stderr, "Cannot open redir file at: %s. error: %s",
-					arg + inIdx + 1, strerror(errno));
-		else {
-			c->fd_in = fd;
-			c->type = REDIR;
-			return true;
-		}
+		// stdin redir
+		c->in_file = arg + 1;
+		c->type = REDIR;
+		return true;
 	}
 	
 	return false;
@@ -411,8 +439,6 @@ static struct cmd* exec_cmd_create(int back) {
 	struct execcmd* e = malloc(sizeof(*e));
 	memset(e, 0, sizeof(*e));
 
-	e->fd_in = -1;
-	e->fd_out = -1;
 	e->type = EXEC;
 	
 	if (back)
@@ -469,8 +495,14 @@ static struct cmd* parse_cmd(char* buf_cmd) {
 
 	if (strlen(buf_cmd) == 0)
 		return NULL;
+		
+	int idx;
 
-	if (block_contains(buf_cmd, '&') >= 0)
+	// checks if the background symbol is after
+	// a redir symbol, in which case
+	// it does not have to run in in the back
+	if ((idx = block_contains(buf_cmd, '&')) >= 0 &&
+			buf_cmd[idx - 1] != '>')
 		return parse_back(buf_cmd);
 		
 	return parse_exec(buf_cmd, 0);
