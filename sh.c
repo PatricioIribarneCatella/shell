@@ -62,6 +62,7 @@ pid_t back;
 static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
+static char STDOUT[] = "stdout";
 
 static char numbers[10] = "0123456789";
 static char bufNum[32];
