@@ -190,8 +190,8 @@ static char* read_line(const char* promt) {
 		c = getchar();
 	}
 
-	// signal handler sets EOF in the
-	// 'stdin'
+	// signal handler sets EOF
+	// in the 'stdin'
 	if (c == EOF && background) {
 		background = 0;
 		return buffer;
