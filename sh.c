@@ -91,7 +91,7 @@ void sig_handler(int num) {
 	
 	fflush(stdout);
 
-	if (waitpid(back, &status, WNOHANG) > 0) {
+	if (back != 0 && waitpid(back, &status, WNOHANG) > 0) {
 		fprintf(stdout, "%s	process %d done [%s], status: %d %s\n",
 			COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
 		background = 1;
@@ -541,6 +541,8 @@ static struct cmd* pipe_cmd_create(struct cmd* left, struct cmd* right) {
 	return (struct cmd*)p;
 }
 
+// splits a string line in two
+// acording to the splitter character
 static char* split_line(char* buf, char splitter) {
 
 	int i = 0;
@@ -557,12 +559,18 @@ static char* split_line(char* buf, char splitter) {
 	return &buf[i];
 }
 
+// parses the command line recursively
+// looking for the pipe character '|'
 static struct cmd* parse_line(char* buf) {
+	
+	struct cmd *r = NULL, *l;
 	
 	char* right = split_line(buf, '|');
 	
-	struct cmd* l = parse_cmd(buf);
-	struct cmd* r = parse_cmd(right);
+	if (strlen(right) != 0)
+		r = parse_line(right);
+
+	l = parse_cmd(buf);
 	
 	return pipe_cmd_create(l, r);
 }
