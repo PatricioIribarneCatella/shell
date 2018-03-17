@@ -6,10 +6,11 @@
 #include <string.h>
 #include <errno.h>
 
+#include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <fcntl.h>
 
 #define COLOR_BLUE "\x1b[34m"
 #define COLOR_RED "\x1b[31m"
@@ -59,6 +60,8 @@ struct pipecmd {
 
 int status;
 pid_t back;
+static stack_t ss;
+static int background;
 
 static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
@@ -67,8 +70,7 @@ static char promt[PRMTLEN];
 static char numbers[10] = "0123456789";
 static char bufNum[32];
 
-/* Auxiliar function - itoa */
-
+/* Util function - itoa */
 static char* itoa(int val) {
 
 	if (val == 0) return "0";
@@ -82,6 +84,18 @@ static char* itoa(int val) {
 	}
 
 	return &bufNum[i + 1];
+}
+
+/* Handler function for SIGCHLD signal */
+void sig_handler(int num) {
+	
+	fflush(stdout);
+
+	if (waitpid(back, &status, WNOHANG) > 0) {
+		fprintf(stdout, "%s	process %d done [%s], status: %d %s\n",
+			COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
+		background = 1;
+	}
 }
 
 // prints information of process´ status
@@ -108,14 +122,6 @@ static void print_status_info(char* cmd) {
 			COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
 		status = -WSTOPSIG(status);
 	}
-}
-
-// prints information of background process´ status
-static void print_background_info() {
-	
-	if ((back != 0) && waitpid(back, &status, WNOHANG) > 0)
-		fprintf(stdout, "%s	process %d done [%s], status: %d %s\n",
-			COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
 }
 
 // exists nicely
@@ -184,7 +190,12 @@ static char* read_line(const char* promt) {
 		c = getchar();
 	}
 
-	if (c == EOF)
+	if (c == EOF && background) {
+		background = 0;
+		return buffer;
+	}
+	
+	if (c == EOF && !background)
 		return NULL;
 
 	buffer[i] = END_STRING;
@@ -596,14 +607,10 @@ static void run_shell() {
 
 	char* cmd;
 
-	while ((cmd = read_line(promt)) != NULL) {
-
-		// if the process in background finished,
-		// print info about it
-		print_background_info();
-		
+	while ((cmd = read_line(promt)) != NULL)
 		run_cmd(cmd);
-	}
+	
+	free(ss.ss_sp);
 }
 
 // initialize the shell
@@ -620,6 +627,21 @@ static void init_shell() {
 		strcat(promt, home);
 		strcat(promt, ")");
 	}
+	
+	// allocates space 
+	// for the new stack handler
+	ss.ss_sp = malloc(SIGSTKSZ);
+	ss.ss_size = SIGSTKSZ;
+	
+	sigaltstack(&ss, NULL);
+	
+	// set signal handler for
+	// SIGCHLD sinal catching
+	struct sigaction act = {0};
+	act.sa_handler = sig_handler;
+	act.sa_flags = SA_ONSTACK;
+	
+	sigaction(SIGCHLD, &act, NULL);
 }
 
 int main(int argc, char const *argv[]) {
