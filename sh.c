@@ -260,6 +260,7 @@ static void exec_cmd(struct cmd* cmd) {
 			redir = *(struct execcmd*)cmd;
 			int fd_in, fd_out, fd_err;
 			
+			// stdin redirection
 			if (redir.in_file) {
 				if ((fd_in = open_redir_fd(redir.in_file)) < 0) {
 					fprintf(stderr, "cannot open file: %s. error: %s\n",
@@ -270,6 +271,7 @@ static void exec_cmd(struct cmd* cmd) {
 					dup2(fd_in, STDIN_FILENO);
 			}
 			
+			// stdout redirection
 			if (redir.out_file) {
 				if ((fd_out = open_redir_fd(redir.out_file)) < 0) {
 					fprintf(stderr, "cannot open file: %s. error: %s\n",
@@ -280,6 +282,7 @@ static void exec_cmd(struct cmd* cmd) {
 					dup2(fd_out, STDOUT_FILENO);
 			}
 
+			// stderr redirection
 			if (redir.err_file) {
 				if (strcmp(redir.err_file, "&1") == 0) {
 					fd_err = STDOUT_FILENO;
@@ -500,7 +503,7 @@ static struct cmd* parse_cmd(char* buf_cmd) {
 
 	// checks if the background symbol is after
 	// a redir symbol, in which case
-	// it does not have to run in in the back
+	// it does not have to run in in the 'back'
 	if ((idx = block_contains(buf_cmd, '&')) >= 0 &&
 			buf_cmd[idx - 1] != '>')
 		return parse_back(buf_cmd);
