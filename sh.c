@@ -36,7 +36,6 @@
 #define WRITE 1
 
 /* Commands definition types */
-
 struct cmd {
 	int type;
 };
@@ -57,9 +56,8 @@ struct pipecmd {
 };
 
 /* Global variables */
-
-int status;
-pid_t back;
+static int status;
+static pid_t back;
 static stack_t ss;
 static int background;
 
@@ -67,7 +65,7 @@ static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
 
-static char numbers[10] = "0123456789";
+static char numbers[] = "0123456789";
 static char bufNum[32];
 
 /* Util function - itoa */
@@ -355,7 +353,7 @@ static void exec_cmd(struct cmd* cmd) {
 
 static char* get_arg(char* buf, int idx) {
 
-	char* arg = malloc(ARGSIZE);
+	char* arg = (char*)malloc(ARGSIZE);
 	memset(arg, 0, ARGSIZE);
 	int i = 0;
 
@@ -454,7 +452,7 @@ static char* expand_environ_var(char* arg) {
 
 static struct cmd* exec_cmd_create(int back) {
 
-	struct execcmd* e = malloc(sizeof(*e));
+	struct execcmd* e = (struct execcmd*)malloc(sizeof(*e));
 	memset(e, 0, sizeof(*e));
 
 	e->type = EXEC;
@@ -531,7 +529,7 @@ static struct cmd* pipe_cmd_create(struct cmd* left, struct cmd* right) {
 	if (!right)
 		return left;
 	
-	struct pipecmd* p = malloc(sizeof(*p));
+	struct pipecmd* p = (struct pipecmd*)malloc(sizeof(*p));
 	memset(p, 0, sizeof(*p));
 	
 	p->type = PIPE;
@@ -656,7 +654,7 @@ static void init_shell() {
 	sigaction(SIGCHLD, &act, NULL);
 }
 
-int main(int argc, char const *argv[]) {
+int main(void) {
 
 	init_shell();
 
