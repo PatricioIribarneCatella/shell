@@ -353,9 +353,11 @@ static void exec_cmd(struct cmd* cmd) {
 
 static char* get_arg(char* buf, int idx) {
 
-	char* arg = (char*)malloc(ARGSIZE);
-	memset(arg, 0, ARGSIZE);
-	int i = 0;
+	char* arg;
+	int i;
+	
+	arg = (char*)calloc(ARGSIZE, ARGSIZE);
+	i = 0;
 
 	while (buf[idx] != SPACE && buf[idx] != END_STRING) {
 		arg[i] = buf[idx];
@@ -452,9 +454,9 @@ static char* expand_environ_var(char* arg) {
 
 static struct cmd* exec_cmd_create(int back) {
 
-	struct execcmd* e = (struct execcmd*)malloc(sizeof(*e));
-	memset(e, 0, sizeof(*e));
-
+	struct execcmd* e;
+	
+	e = (struct execcmd*)calloc(sizeof(*e), sizeof(*e));
 	e->type = EXEC;
 	
 	if (back)
@@ -529,8 +531,9 @@ static struct cmd* pipe_cmd_create(struct cmd* left, struct cmd* right) {
 	if (!right)
 		return left;
 	
-	struct pipecmd* p = (struct pipecmd*)malloc(sizeof(*p));
-	memset(p, 0, sizeof(*p));
+	struct pipecmd* p;
+
+	p = (struct pipecmd*)calloc(sizeof(*p), sizeof(*p));
 	
 	p->type = PIPE;
 	p->leftcmd = left;
