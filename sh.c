@@ -71,12 +71,12 @@ static char bufNum[32];
 /* Util function - itoa */
 static char* itoa(int val) {
 
-	if (val == 0) return "0";
+	if (val == 0)
+		return "0";
 
 	int i;
 
 	for (i = 30; val > 0 ; --i) {
-
 		bufNum[i] = numbers[val % 10];
 		val /= 10;
 	}
@@ -150,10 +150,10 @@ static int cd(char* cmd) {
 			dir = cmd + 3;
 		}
 
-		if (chdir(dir) < 0)
-			fprintf(stderr, "cannot cd to %s. error: %s\n",
-				dir, strerror(errno));
-		else {
+		if (chdir(dir) < 0) {
+			fprintf(stderr, "cannot cd to %s\n", dir);
+			perror(NULL);
+		} else {
 			memset(promt, 0, PRMTLEN);
 			strcat(promt, "(");
 			char* cwd = get_current_dir_name();
@@ -182,9 +182,7 @@ static char* read_line(const char* promt) {
 	int c = getchar();
 
 	while (c != END_LINE && c != EOF) {
-
 		buffer[i++] = c;
-
 		c = getchar();
 	}
 
@@ -232,8 +230,8 @@ static int open_redir_fd(char* file) {
 	int fd;
 
 	fd = open(file,
-			O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
-			S_IRUSR | S_IWUSR);
+		O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
+		S_IRUSR | S_IWUSR);
 
 	return fd;
 }
@@ -254,8 +252,9 @@ static void exec_cmd(struct cmd* cmd) {
 			
 			execvp(exec.argv[0], exec.argv);
 			
-			fprintf(stderr, "cannot exec %s. error: %s\n",
-				exec.argv[0], strerror(errno));
+			fprintf(stderr, "cannot exec %s\n", exec.argv[0]);
+			perror(NULL);
+
 			_exit(EXIT_FAILURE);
 			break;
 
@@ -276,8 +275,8 @@ static void exec_cmd(struct cmd* cmd) {
 			// stdin redirection
 			if (redir.in_file) {
 				if ((fd_in = open_redir_fd(redir.in_file)) < 0) {
-					fprintf(stderr, "cannot open file: %s. error: %s\n",
-						redir.in_file, strerror(errno));
+					fprintf(stderr, "cannot open file: %s\n", redir.in_file);
+					perror(NULL);
 					_exit(EXIT_FAILURE);
 				}
 				if (fd_in >= 0)
@@ -287,8 +286,8 @@ static void exec_cmd(struct cmd* cmd) {
 			// stdout redirection
 			if (redir.out_file) {
 				if ((fd_out = open_redir_fd(redir.out_file)) < 0) {
-					fprintf(stderr, "cannot open file: %s. error: %s\n",
-						redir.out_file, strerror(errno));
+					fprintf(stderr, "cannot open file: %s\n", redir.out_file);
+					perror(NULL);
 					_exit(EXIT_FAILURE);
 				}
 				if (fd_out >= 0)
@@ -301,8 +300,8 @@ static void exec_cmd(struct cmd* cmd) {
 					fd_err = STDOUT_FILENO;
 				}
 				else if ((fd_err = open_redir_fd(redir.err_file)) < 0) {
-					fprintf(stderr, "cannot open file: %s. error: %s\n",
-						redir.err_file, strerror(errno));
+					fprintf(stderr, "cannot open file: %s\n", redir.err_file);
+					perror(NULL);
 					_exit(EXIT_FAILURE);
 				}
 				if (fd_err >= 0)
@@ -320,8 +319,8 @@ static void exec_cmd(struct cmd* cmd) {
 			free(cmd);
 			
 			if (pipe(p) < 0) {
-				fprintf(stderr, "pipe creation failed. error: %s\n",
-					strerror(errno));
+				fprintf(stderr, "pipe creation failed\n");
+				perror(NULL);
 				_exit(EXIT_FAILURE);
 			}
 			
@@ -549,7 +548,7 @@ static char* split_line(char* buf, char splitter) {
 	int i = 0;
 
 	while (buf[i] != splitter &&
-			buf[i] != END_STRING)
+		buf[i] != END_STRING)
 		i++;
 		
 	buf[i++] = END_STRING;
@@ -632,10 +631,10 @@ static void init_shell() {
 
 	char* home = getenv("HOME");
 
-	if (chdir(home) < 0)
-		fprintf(stderr, "cannot cd to %s. error: %s\n",
-			home, strerror(errno));
-	else {
+	if (chdir(home) < 0) {
+		fprintf(stderr, "cannot cd to %s\n", home);
+		perror(NULL);
+	} else {
 		strcat(promt, "(");
 		strcat(promt, home);
 		strcat(promt, ")");
