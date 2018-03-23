@@ -34,7 +34,7 @@ Filesystem      Size  Used Avail Use% Mounted on
 tmpfs           8.3G  2.0M  8.3G   1% /tmp
 ```
 
-- Environment variables expansion
+- Environment (and magic - just '?' for now) variables expansion
 
 ```bash
 $ echo $TERM
