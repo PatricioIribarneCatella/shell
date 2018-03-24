@@ -15,7 +15,7 @@ run: all
 	./sh
 
 valgrind: all
-	valgrind --leak-check=full ./sh
+	valgrind --leak-check=full --show-leak-kinds=all ./sh
 
 clean:
 	rm -f sh *.o *.asm

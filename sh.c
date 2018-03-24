@@ -24,6 +24,7 @@
 #define PRMTLEN 1024
 #define MAXARGS 20
 #define ARGSIZE 100
+#define FNAMESIZE 200
 
 // Command representation after parsed
 #define EXEC 1
@@ -42,9 +43,10 @@ struct cmd {
 
 struct execcmd {
 	int type;
-	char* out_file;
-	char* in_file;
-	char* err_file;
+	int argc;
+	char out_file[FNAMESIZE];
+	char in_file[FNAMESIZE];
+	char err_file[FNAMESIZE];
 	char* argv[MAXARGS];
 	char* eargv[MAXARGS];
 };
@@ -125,8 +127,14 @@ static void print_status_info(char* cmd) {
 // exists nicely
 static void exit_shell(char* cmd) {
 
-	if (strcmp(cmd, "exit") == 0)
+	if (strcmp(cmd, "exit") == 0) {
+
+		// frees the space 
+		// of the handler´s stack
+		free(ss.ss_sp);
+		
 		_exit(EXIT_SUCCESS);
+	}
 }
 
 // returns true if "chdir" was performed
@@ -273,7 +281,7 @@ static void exec_cmd(struct cmd* cmd) {
 			int fd_in, fd_out, fd_err;
 			
 			// stdin redirection
-			if (redir.in_file) {
+			if (strlen(redir.in_file) > 0) {
 				if ((fd_in = open_redir_fd(redir.in_file)) < 0) {
 					fprintf(stderr, "cannot open file: %s\n", redir.in_file);
 					perror(NULL);
@@ -284,7 +292,7 @@ static void exec_cmd(struct cmd* cmd) {
 			}
 			
 			// stdout redirection
-			if (redir.out_file) {
+			if (strlen(redir.out_file) > 0) {
 				if ((fd_out = open_redir_fd(redir.out_file)) < 0) {
 					fprintf(stderr, "cannot open file: %s\n", redir.out_file);
 					perror(NULL);
@@ -295,7 +303,7 @@ static void exec_cmd(struct cmd* cmd) {
 			}
 
 			// stderr redirection
-			if (redir.err_file) {
+			if (strlen(redir.err_file) > 0) {
 				if (strcmp(redir.err_file, "&1") == 0) {
 					fd_err = STDOUT_FILENO;
 				}
@@ -355,7 +363,7 @@ static char* get_arg(char* buf, int idx) {
 	char* arg;
 	int i;
 	
-	arg = (char*)calloc(ARGSIZE, ARGSIZE);
+	arg = (char*)calloc(ARGSIZE, sizeof(char));
 	i = 0;
 
 	while (buf[idx] != SPACE && buf[idx] != END_STRING) {
@@ -387,24 +395,30 @@ static bool redir_flow(struct execcmd* c, char* arg) {
 		switch (outIdx) {
 			// stdout redir
 			case 0: {
-				c->out_file = arg + 1;
+				strcpy(c->out_file, arg + 1);
 				break;
 			}
 			// stderr redir
 			case 1: {
-				c->err_file = &arg[outIdx + 1];
+				strcpy(c->err_file, &arg[outIdx + 1]);
 				break;
 			}
 		}
+		
+		free(arg);
 		c->type = REDIR;
+		
 		return true;
 	}
 	
 	// flow redirection for input
 	if ((inIdx = block_contains(arg, '<')) >= 0) {
 		// stdin redir
-		c->in_file = arg + 1;
+		strcpy(c->in_file, arg + 1);
+		
 		c->type = REDIR;
+		free(arg);
+		
 		return true;
 	}
 	
@@ -426,6 +440,7 @@ static bool set_environ_var(char* arg) {
 		
 		if (block_contains(key, '-') < 0) {
 			setenv(key, value, 1);
+			free(arg);
 			return true;
 		}
 	}
@@ -438,14 +453,14 @@ static char* expand_environ_var(char* arg) {
 	// expand environment variables
 	if (arg[0] == '$') {
 
-		char* aux = arg;
+		char* aux;
 
 		if (arg[1] == '?')
-			arg = itoa(status);
+			aux = itoa(status);
 		else
-			arg = getenv(arg + 1);
+			aux = getenv(arg + 1);
 
-		free(aux);
+		strcpy(arg, aux);
 	}
 	
 	return arg;
@@ -492,6 +507,7 @@ static struct cmd* parse_exec(char* buf_cmd, int back) {
 	}
 	
 	c->argv[argc] = (char*)NULL;
+	c->argc = argc;
 	
 	return (struct cmd*)c;
 }
@@ -575,6 +591,31 @@ static struct cmd* parse_line(char* buf) {
 	return pipe_cmd_create(l, r);
 }
 
+// frees the memory allocated for the command
+static void free_command(struct cmd* cmd) {
+
+	struct pipecmd* p;
+	struct execcmd* e;
+
+	if (cmd->type == PIPE) {
+		
+		p = (struct pipecmd*)cmd;
+		
+		free_command(p->leftcmd);
+		free_command(p->rightcmd);
+		
+		free(p);
+		return;
+	}
+
+	e = (struct execcmd*)cmd;
+
+	for (int i = 0; i < e->argc; i++)
+		free(e->argv[i]);
+
+	free(e);
+}
+
 // runs the command in 'cmd'
 static void run_cmd(char* cmd) {
 	
@@ -613,6 +654,8 @@ static void run_cmd(char* cmd) {
 	
 	if (parsed->type != PIPE)
 		print_status_info(cmd);
+
+	free_command(parsed);
 }
 
 static void run_shell() {
@@ -621,7 +664,9 @@ static void run_shell() {
 
 	while ((cmd = read_line(promt)) != NULL)
 		run_cmd(cmd);
-	
+
+	// frees the space 
+	// of the handler´s stack
 	free(ss.ss_sp);
 }
 
@@ -641,7 +686,7 @@ static void init_shell() {
 	}
 	
 	// allocates space 
-	// for the new stack handler
+	// for the new handler´s stack
 	ss.ss_sp = malloc(SIGSTKSZ);
 	ss.ss_size = SIGSTKSZ;
 	
