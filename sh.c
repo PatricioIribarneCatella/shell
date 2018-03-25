@@ -244,6 +244,31 @@ static int open_redir_fd(char* file) {
 	return fd;
 }
 
+// frees the memory allocated for the command
+static void free_command(struct cmd* cmd) {
+
+	struct pipecmd* p;
+	struct execcmd* e;
+
+	if (cmd->type == PIPE) {
+		
+		p = (struct pipecmd*)cmd;
+		
+		free_command(p->leftcmd);
+		free_command(p->rightcmd);
+		
+		free(p);
+		return;
+	}
+
+	e = (struct execcmd*)cmd;
+
+	for (int i = 0; i < e->argc; i++)
+		free(e->argv[i]);
+
+	free(e);
+}
+
 // executes a command - does not return
 static void exec_cmd(struct cmd* cmd) {
 
@@ -324,7 +349,6 @@ static void exec_cmd(struct cmd* cmd) {
 		case PIPE: {
 			// pipes two commands
 			pipe_cmd = *(struct pipecmd*)cmd;
-			free(cmd);
 			
 			if (pipe(p) < 0) {
 				fprintf(stderr, "pipe creation failed\n");
@@ -352,6 +376,9 @@ static void exec_cmd(struct cmd* cmd) {
 			wait(NULL);
 			wait(NULL);
 			
+			free_command(cmd);
+			free(ss.ss_sp);
+
 			_exit(EXIT_SUCCESS);
 			break;
 		}
@@ -591,30 +618,6 @@ static struct cmd* parse_line(char* buf) {
 	return pipe_cmd_create(l, r);
 }
 
-// frees the memory allocated for the command
-static void free_command(struct cmd* cmd) {
-
-	struct pipecmd* p;
-	struct execcmd* e;
-
-	if (cmd->type == PIPE) {
-		
-		p = (struct pipecmd*)cmd;
-		
-		free_command(p->leftcmd);
-		free_command(p->rightcmd);
-		
-		free(p);
-		return;
-	}
-
-	e = (struct execcmd*)cmd;
-
-	for (int i = 0; i < e->argc; i++)
-		free(e->argv[i]);
-
-	free(e);
-}
 
 // runs the command in 'cmd'
 static void run_cmd(char* cmd) {
