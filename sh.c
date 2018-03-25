@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
+// color scape strings
 #define COLOR_BLUE "\x1b[34m"
 #define COLOR_RED "\x1b[31m"
 #define COLOR_RESET "\x1b[0m"
@@ -63,6 +64,7 @@ static pid_t back;
 static stack_t ss;
 static int background;
 static struct cmd* parsed_back;
+static struct cmd* parsed_pipe;
 
 static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
@@ -87,7 +89,8 @@ static char* itoa(int val) {
 	return &bufNum[i + 1];
 }
 
-// frees the memory allocated for the command
+// frees the memory allocated 
+// for the tree structure command
 static void free_command(struct cmd* cmd) {
 
 	struct pipecmd* p;
@@ -265,7 +268,7 @@ static int open_redir_fd(char* file) {
 	int fd;
 
 	fd = open(file,
-		O_APPEND | O_CLOEXEC | O_RDWR | O_CREAT,
+		O_TRUNC | O_CLOEXEC | O_RDWR | O_CREAT,
 		S_IRUSR | S_IWUSR);
 
 	return fd;
@@ -375,7 +378,9 @@ static void exec_cmd(struct cmd* cmd) {
 			close(p[READ]);
 			close(p[WRITE]);
 		
-			free_command(cmd);
+			// free the memory allocated
+			// for the pipe tree structure
+			free_command(parsed_pipe);
 			free(ss.ss_sp);
 
 			wait(NULL);
@@ -387,6 +392,7 @@ static void exec_cmd(struct cmd* cmd) {
 	}
 }
 
+// parses an argument of the command stream input
 static char* get_arg(char* buf, int idx) {
 
 	char* arg;
@@ -415,6 +421,7 @@ static int block_contains(char* buf, char c) {
 	return -1;
 }
 
+// parses and changes stdin/out/err if needed
 static bool redir_flow(struct execcmd* c, char* arg) {
 
 	int inIdx, outIdx;
@@ -454,6 +461,8 @@ static bool redir_flow(struct execcmd* c, char* arg) {
 	return false;
 }
 
+// parses and sets a pair KEY=VALUE
+// environment variable
 static bool set_environ_var(char* arg) {
 
 	int equalIndex;
@@ -467,6 +476,14 @@ static bool set_environ_var(char* arg) {
 		get_environ_key(arg, key);
 		get_environ_value(arg, value, equalIndex);
 		
+		// checks if the KEY part of the pair
+		// does not contain a '-' char which means
+		// that it is not a environ var, but also
+		// an argument of the program to be excuted
+		// (For example: 
+		// 	./prog -arg=value
+		// 	./prog --arg=value
+		// )
 		if (block_contains(key, '-') < 0) {
 			setenv(key, value, 1);
 			free(arg);
@@ -508,6 +525,10 @@ static struct cmd* exec_cmd_create(int back) {
 	return (struct cmd*)e;
 }
 
+// parses one single command having into account:
+// - the arguments passed to the program
+// - stdin/stdout/stderr flow changes
+// - environment variables (expand and set)
 static struct cmd* parse_exec(char* buf_cmd, int back) {
 
 	struct execcmd* c;
@@ -541,6 +562,8 @@ static struct cmd* parse_exec(char* buf_cmd, int back) {
 	return (struct cmd*)c;
 }
 
+// parses a command knowing that it contains
+// the '&' char
 static struct cmd* parse_back(char* buf_cmd) {
 
 	int i = 0;
@@ -553,6 +576,8 @@ static struct cmd* parse_back(char* buf_cmd) {
 	return parse_exec(buf_cmd, 1);
 }
 
+// parses a command and checks if it contains
+// the '&' (background process) character
 static struct cmd* parse_cmd(char* buf_cmd) {
 
 	if (strlen(buf_cmd) == 0)
@@ -570,6 +595,7 @@ static struct cmd* parse_cmd(char* buf_cmd) {
 	return parse_exec(buf_cmd, 0);
 }
 
+// encapsulates two commands into one pipe struct
 static struct cmd* pipe_cmd_create(struct cmd* left, struct cmd* right) {
 
 	if (!right)
@@ -644,12 +670,23 @@ static void run_cmd(char* cmd) {
 	parsed = parse_line(cmd);
 
 	// forks and run the command
-	if ((p = fork()) == 0)
+	if ((p = fork()) == 0) {
+		
+		// keep a reference
+		// to the parsed pipe cmd
+		// so it can be freed later
+		if (parsed->type == PIPE)
+			parsed_pipe = parsed;
+
 		exec_cmd(parsed);
+	}
 
 	// doesn´t wait for it to finish
 	if (parsed->type == BACK) {
 		strcpy(back_cmd, cmd);
+		// keep a reference
+		// to the parsed back cmd
+		// to free it when it finishes
 		parsed_back = parsed;
 		back = p;
 		return;
