@@ -62,6 +62,7 @@ static int status;
 static pid_t back;
 static stack_t ss;
 static int background;
+static struct cmd* parsed_back;
 
 static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
@@ -86,6 +87,31 @@ static char* itoa(int val) {
 	return &bufNum[i + 1];
 }
 
+// frees the memory allocated for the command
+static void free_command(struct cmd* cmd) {
+
+	struct pipecmd* p;
+	struct execcmd* e;
+
+	if (cmd->type == PIPE) {
+		
+		p = (struct pipecmd*)cmd;
+		
+		free_command(p->leftcmd);
+		free_command(p->rightcmd);
+		
+		free(p);
+		return;
+	}
+
+	e = (struct execcmd*)cmd;
+
+	for (int i = 0; i < e->argc; i++)
+		free(e->argv[i]);
+
+	free(e);
+}
+
 /* Handler function for SIGCHLD signal */
 void sig_handler(int num) {
 	
@@ -95,6 +121,7 @@ void sig_handler(int num) {
 		fprintf(stdout, "%s	process %d done [%s], status: %d %s\n",
 			COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
 		background = 1;
+		free_command(parsed_back);
 	}
 }
 
@@ -244,30 +271,6 @@ static int open_redir_fd(char* file) {
 	return fd;
 }
 
-// frees the memory allocated for the command
-static void free_command(struct cmd* cmd) {
-
-	struct pipecmd* p;
-	struct execcmd* e;
-
-	if (cmd->type == PIPE) {
-		
-		p = (struct pipecmd*)cmd;
-		
-		free_command(p->leftcmd);
-		free_command(p->rightcmd);
-		
-		free(p);
-		return;
-	}
-
-	e = (struct execcmd*)cmd;
-
-	for (int i = 0; i < e->argc; i++)
-		free(e->argv[i]);
-
-	free(e);
-}
 
 // executes a command - does not return
 static void exec_cmd(struct cmd* cmd) {
@@ -281,7 +284,6 @@ static void exec_cmd(struct cmd* cmd) {
 
 		case EXEC:
 			exec = *(struct execcmd*)cmd;
-			//free(cmd);
 			
 			execvp(exec.argv[0], exec.argv);
 			
@@ -372,13 +374,13 @@ static void exec_cmd(struct cmd* cmd) {
 			
 			close(p[READ]);
 			close(p[WRITE]);
-			
-			wait(NULL);
-			wait(NULL);
-			
+		
 			free_command(cmd);
 			free(ss.ss_sp);
 
+			wait(NULL);
+			wait(NULL);
+			
 			_exit(EXIT_SUCCESS);
 			break;
 		}
@@ -648,6 +650,7 @@ static void run_cmd(char* cmd) {
 	// doesn´t wait for it to finish
 	if (parsed->type == BACK) {
 		strcpy(back_cmd, cmd);
+		parsed_back = parsed;
 		back = p;
 		return;
 	}
