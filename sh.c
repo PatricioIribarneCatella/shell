@@ -281,7 +281,7 @@ static void exec_cmd(struct cmd* cmd) {
 
 		case EXEC:
 			exec = *(struct execcmd*)cmd;
-			free(cmd);
+			//free(cmd);
 			
 			execvp(exec.argv[0], exec.argv);
 			
