@@ -683,11 +683,14 @@ static void run_cmd(char* cmd) {
 
 	// doesn´t wait for it to finish
 	if (parsed->type == BACK) {
+		
 		strcpy(back_cmd, cmd);
+		
 		// keep a reference
 		// to the parsed back cmd
 		// to free it when it finishes
 		parsed_back = parsed;
+		
 		back = p;
 		return;
 	}
