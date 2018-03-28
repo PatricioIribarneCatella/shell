@@ -70,25 +70,6 @@ static char back_cmd[BUFLEN];
 static char buffer[BUFLEN];
 static char promt[PRMTLEN];
 
-static char numbers[] = "0123456789";
-static char bufNum[32];
-
-/* Util function - itoa */
-static char* itoa(int val) {
-
-	if (val == 0)
-		return "0";
-
-	int i;
-
-	for (i = 30; val > 0 ; --i) {
-		bufNum[i] = numbers[val % 10];
-		val /= 10;
-	}
-
-	return &bufNum[i + 1];
-}
-
 // frees the memory allocated 
 // for the tree structure command
 static void free_command(struct cmd* cmd) {
@@ -128,7 +109,7 @@ void sig_handler(int num) {
 	}
 }
 
-// prints information of process´ status
+// prints information of process' status
 static void print_status_info(char* cmd) {
 	
 	if (strlen(cmd) == 0)
@@ -500,9 +481,12 @@ static char* expand_environ_var(char* arg) {
 	if (arg[0] == '$') {
 
 		char* aux;
+		char s[10];
 
-		if (arg[1] == '?')
-			aux = itoa(status);
+		if (arg[1] == '?') {
+			sprintf(s, "%d", status);
+			aux = s;
+		}
 		else
 			aux = getenv(arg + 1);
 
