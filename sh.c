@@ -135,26 +135,28 @@ static int cd(char* cmd) {
 // and prints the prompt
 static char* read_line(const char* promt) {
 
-	fprintf(stdout, "%s %s %s\n", COLOR_RED, promt, COLOR_RESET);
-	fprintf(stdout, "%s", "$ ");
+	int i = 0,
+	    c = 0;
 
 	memset(buffer, 0, BUFLEN);
-
-	int i = 0;
-	int c = getchar();
-
-	while (c != END_LINE && c != EOF) {
-		buffer[i++] = c;
-		c = getchar();
-	}
-
+	
 	// signal handler sets EOF
 	// in the 'stdin'
 	if (c == EOF && background) {
 		background = 0;
 		return buffer;
 	}
-	
+
+	fprintf(stdout, "%s %s %s\n", COLOR_RED, promt, COLOR_RESET);
+	fprintf(stdout, "%s", "$ ");
+
+	c = getchar();
+
+	while (c != END_LINE && c != EOF) {
+		buffer[i++] = c;
+		c = getchar();
+	}
+		
 	// if the user press ctrl+D
 	// just exit normally
 	if (c == EOF && !background)
@@ -577,7 +579,7 @@ static struct cmd* parse_line(char* buf) {
 // runs the command in 'cmd'
 static void run_cmd(char* cmd) {
 	
-	pid_t p;
+	pid_t p, w;
 	struct cmd *parsed;
 
 	// if the "enter" key is pressed
@@ -623,8 +625,14 @@ static void run_cmd(char* cmd) {
 	}
 
 	// waits for the process to finish
-	waitpid(p, &status, 0);
-	
+	// it checks it in a loop because
+	// when a process in background finishes
+	// it goes to the next instruction but the
+	// waitpid call it haven´t finished yet
+	do {
+		w = waitpid(p, &status, 0);
+	} while (w != p);
+
 	if (parsed->type != PIPE)
 		print_status_info(cmd);
 
@@ -666,10 +674,18 @@ static void init_shell() {
 	sigaltstack(&ss, NULL);
 	
 	// set signal handler for
-	// SIGCHLD sinal catching
+	// SIGCHLD singal catching
 	struct sigaction act = {0};
 	act.sa_handler = sig_handler;
 	act.sa_flags = SA_ONSTACK;
+
+	// blocks any other signal
+	// interrupt when the handler
+	// is being executed
+	sigset_t sig;
+	sigemptyset(&sig);
+	sigaddset(&sig, SIGCHLD);
+	act.sa_mask = sig;
 	
 	sigaction(SIGCHLD, &act, NULL);
 }
