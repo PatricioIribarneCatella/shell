@@ -680,7 +680,8 @@ static void init_shell() {
 	act.sa_flags = SA_ONSTACK;
 
 	// blocks any other signal
-	// interrupt when the handler
+	// interrupt (SIGCHLD in this case)
+	// when the handler
 	// is being executed
 	sigset_t sig;
 	sigemptyset(&sig);
