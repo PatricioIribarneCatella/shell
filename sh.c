@@ -36,6 +36,9 @@ static void free_command(struct cmd* cmd) {
 	for (int i = 0; i < e->argc; i++)
 		free(e->argv[i]);
 
+	for (int j = 0; j < e->eargc; j++)
+		free(e->eargv[j]);
+
 	free(e);
 }
 
@@ -189,6 +192,8 @@ static void get_environ_value(char* arg, char* value, int idx) {
 	value[j] = END_STRING;
 }
 
+// opens the file in which the stdin or
+// stdout flow will be redirected
 static int open_redir_fd(char* file) {
 
 	int fd;
@@ -200,6 +205,35 @@ static int open_redir_fd(char* file) {
 	return fd;
 }
 
+// looks in a block for the 'c' character
+// and returns the index in which it is, or -1
+// in other case
+static int block_contains(char* buf, char c) {
+
+	for (int i = 0; i < strlen(buf); i++)
+		if (buf[i] == c)
+			return i;
+	
+	return -1;
+}
+
+// sets the environment variables passed
+// in the command line
+static void set_environ_vars(char** eargv, int eargc) {
+
+	int equalIndex;
+	char key[50], value[50];
+
+	for (int i = 0; i < eargc; i++) {
+
+		equalIndex = block_contains(eargv[i], '=');
+
+		get_environ_key(eargv[i], key);
+		get_environ_value(eargv[i], value, equalIndex);
+
+		setenv(key, value, 1);
+	}
+} 
 
 // executes a command - does not return
 static void exec_cmd(struct cmd* cmd) {
@@ -213,6 +247,8 @@ static void exec_cmd(struct cmd* cmd) {
 
 		case EXEC:
 			exec = *(struct execcmd*)cmd;
+
+			set_environ_vars(exec.eargv, exec.eargc);
 			
 			execvp(exec.argv[0], exec.argv);
 			
@@ -335,17 +371,6 @@ static char* get_arg(char* buf, int idx) {
 	return arg;
 }
 
-// looks in a block for the 'c' character
-// and returns the index in which it is, or -1
-// in other case
-static int block_contains(char* buf, char c) {
-
-	for (int i = 0; i < strlen(buf); i++)
-		if (buf[i] == c)
-			return i;
-	
-	return -1;
-}
 
 // parses and changes stdin/out/err if needed
 static bool redir_flow(struct execcmd* c, char* arg) {
@@ -389,30 +414,22 @@ static bool redir_flow(struct execcmd* c, char* arg) {
 
 // parses and sets a pair KEY=VALUE
 // environment variable
-static bool set_environ_var(char* arg) {
-
-	int equalIndex;
+static bool parse_environ_var(struct execcmd* c, char* arg) {
 
 	// sets environment variables apart from the
 	// ones defined in the global variable "environ"
-	if ((equalIndex = block_contains(arg, '=')) > 0) {
+	if (block_contains(arg, '=') > 0) {
 
-		char key[50], value[50];
-
-		get_environ_key(arg, key);
-		get_environ_value(arg, value, equalIndex);
-		
 		// checks if the KEY part of the pair
 		// does not contain a '-' char which means
 		// that it is not a environ var, but also
-		// an argument of the program to be excuted
-		// (For example: 
+		// an argument of the program to be executed
+		// (For example:
 		// 	./prog -arg=value
 		// 	./prog --arg=value
 		// )
-		if (block_contains(key, '-') < 0) {
-			setenv(key, value, 1);
-			free(arg);
+		if (block_contains(arg, '-') < 0) {
+			c->eargv[c->eargc++] = arg;
 			return true;
 		}
 	}
@@ -420,9 +437,9 @@ static bool set_environ_var(char* arg) {
 	return false;
 }
 
+// expand environment variables
 static char* expand_environ_var(char* arg) {
 
-	// expand environment variables
 	if (arg[0] == '$') {
 
 		char* aux;
@@ -441,6 +458,8 @@ static char* expand_environ_var(char* arg) {
 	return arg;
 }
 
+// creates an execcmd struct to store 
+// the args and environ vars of the command
 static struct cmd* exec_cmd_create(int back) {
 
 	struct execcmd* e;
@@ -479,7 +498,7 @@ static struct cmd* parse_exec(char* buf_cmd, int back) {
 		if (redir_flow(c, arg))
 			continue;
 		
-		if (set_environ_var(arg))
+		if (parse_environ_var(c, arg))
 			continue;
 		
 		c->argv[argc++] = arg;

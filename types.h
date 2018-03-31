@@ -10,6 +10,7 @@ struct cmd {
 struct execcmd {
 	int type;
 	int argc;
+	int eargc;
 	char out_file[FNAMESIZE];
 	char in_file[FNAMESIZE];
 	char err_file[FNAMESIZE];
