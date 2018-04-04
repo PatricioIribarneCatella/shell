@@ -17,6 +17,7 @@ static char promt[PRMTLEN];
 // for the tree structure command
 static void free_command(struct cmd* cmd) {
 
+	int i;
 	struct pipecmd* p;
 	struct execcmd* e;
 
@@ -33,11 +34,11 @@ static void free_command(struct cmd* cmd) {
 
 	e = (struct execcmd*)cmd;
 
-	for (int i = 0; i < e->argc; i++)
+	for (i = 0; i < e->argc; i++)
 		free(e->argv[i]);
 
-	for (int j = 0; j < e->eargc; j++)
-		free(e->eargv[j]);
+	for (i = 0; i < e->eargc; i++)
+		free(e->eargv[i]);
 
 	free(e);
 }
@@ -121,7 +122,7 @@ static int cd(char* cmd) {
 		} else {
 			memset(promt, 0, PRMTLEN);
 			strcat(promt, "(");
-			char* cwd = get_current_dir_name();
+			char* cwd = getcwd(NULL, 0);
 			strcat(promt, cwd);
 			free(cwd);
 			strcat(promt, ")");
