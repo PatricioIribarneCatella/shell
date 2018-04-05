@@ -82,6 +82,11 @@ static void print_status_info(char* cmd) {
 	}
 }
 
+static void print_back_info(int back_pid) {
+	fprintf(stdout, "%s  [PID=%d] %s\n",
+		COLOR_BLUE, back_pid, COLOR_RESET);
+}
+
 // exists nicely
 static void exit_shell(char* cmd) {
 
@@ -260,7 +265,10 @@ static void exec_cmd(struct cmd* cmd) {
 			break;
 
 		case BACK: {
-			// sets the current process group id to 0
+			// sets the current 
+			// process group id
+			// to the PID of the 
+			// calling process
 			setpgid(0, 0);
 			cmd->type = EXEC;
 			
@@ -641,6 +649,8 @@ static void run_cmd(char* cmd) {
 		parsed_back = parsed;
 		
 		back = p;
+		print_back_info(back);
+
 		return;
 	}
 
