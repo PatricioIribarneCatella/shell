@@ -144,9 +144,9 @@ static char* read_line(const char* promt) {
 
 	memset(buffer, 0, BUFLEN);
 	
-	// signal handler sets EOF
-	// in the 'stdin'
-	if (c == EOF && background) {
+	// signal handler sets
+	// 'background' in true
+	if (background) {
 		background = 0;
 		return buffer;
 	}
@@ -645,13 +645,19 @@ static void run_cmd(char* cmd) {
 	}
 
 	// waits for the process to finish
-	// it checks it in a loop because
-	// when a process in background finishes
-	// it goes to the next instruction but the
-	// waitpid call it haven´t finished yet
-	do {
-		w = waitpid(p, &status, 0);
-	} while (w != p);
+	w = waitpid(p, &status, 0);
+	
+	// it checks if the return value
+	// is negative and if errno is EINTR.
+	// This could have happend
+	// because of an interrupt 
+	// by a SIGCHLD signal of
+	// a process in background that finished.
+	// It goes to the next instruction but the
+	// waitpid call hasn´t finished yet,
+	// so it try it again
+	if (w < 0 && errno == EINTR)
+		waitpid(p, &status, 0);
 
 	if (parsed->type != PIPE)
 		print_status_info(cmd);
