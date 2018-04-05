@@ -364,20 +364,20 @@ static void exec_cmd(struct cmd* cmd) {
 }
 
 // parses an argument of the command stream input
-static char* get_arg(char* buf, int idx) {
+static char* get_token(char* buf, int idx) {
 
-	char* arg;
+	char* tok;
 	int i;
 	
-	arg = (char*)calloc(ARGSIZE, sizeof(char));
+	tok = (char*)calloc(ARGSIZE, sizeof(char));
 	i = 0;
 
 	while (buf[idx] != SPACE && buf[idx] != END_STRING) {
-		arg[i] = buf[idx];
+		tok[i] = buf[idx];
 		i++; idx++;
 	}
 
-	return arg;
+	return tok;
 }
 
 
@@ -489,28 +489,28 @@ static struct cmd* exec_cmd_create(int back) {
 static struct cmd* parse_exec(char* buf_cmd, int back) {
 
 	struct execcmd* c;
-	char* arg;
+	char* tok;
 	int idx = 0, argc = 0;
 	
 	c = (struct execcmd*)exec_cmd_create(back);
 	
 	while (buf_cmd[idx] != END_STRING) {
 	
-		arg = get_arg(buf_cmd, idx);
-		idx = idx + strlen(arg);
+		tok = get_token(buf_cmd, idx);
+		idx = idx + strlen(tok);
 		
 		if (buf_cmd[idx] != END_STRING)
 			idx++;
 		
-		arg = expand_environ_var(arg);
+		tok = expand_environ_var(tok);
 		
-		if (redir_flow(c, arg))
+		if (redir_flow(c, tok))
 			continue;
 		
-		if (parse_environ_var(c, arg))
+		if (parse_environ_var(c, tok))
 			continue;
 		
-		c->argv[argc++] = arg;
+		c->argv[argc++] = tok;
 	}
 	
 	c->argv[argc] = (char*)NULL;
