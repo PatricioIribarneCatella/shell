@@ -24,4 +24,9 @@ struct pipecmd {
 	struct cmd* rightcmd;
 };
 
+struct backcmd {
+	int type;
+	struct cmd* c;
+};
+
 #endif // TYPES_H

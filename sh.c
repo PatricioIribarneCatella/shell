@@ -43,6 +43,18 @@ static void free_command(struct cmd* cmd) {
 	free(e);
 }
 
+// frees the memory allocated for
+// the background structure
+static void free_back_command(struct cmd* back) {
+
+	struct backcmd* b;
+
+	b = (struct backcmd*)back;
+
+	free_command(b->c);
+	free(b);
+}
+
 /* Handler function for SIGCHLD signal */
 void sig_handler(int num) {
 	
@@ -52,7 +64,7 @@ void sig_handler(int num) {
 		fprintf(stdout, "%s	process %d done [%s], status: %d %s\n",
 			COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
 		background = 1;
-		free_command(parsed_back);
+		free_back_command(parsed_back);
 	}
 }
 
@@ -247,6 +259,7 @@ static void exec_cmd(struct cmd* cmd) {
 	struct execcmd exec;
 	struct execcmd redir;
 	struct pipecmd pipe_cmd;
+	struct backcmd back_cmd;
 	int p[2];
 
 	switch (cmd->type) {
@@ -265,14 +278,15 @@ static void exec_cmd(struct cmd* cmd) {
 			break;
 
 		case BACK: {
+			back_cmd = *(struct backcmd*)cmd;
+
 			// sets the current 
 			// process group id
 			// to the PID of the 
 			// calling process
 			setpgid(0, 0);
-			cmd->type = EXEC;
 			
-			exec_cmd(cmd);
+			exec_cmd(back_cmd.c);
 			break;
 		}
 
@@ -469,30 +483,40 @@ static char* expand_environ_var(char* arg) {
 
 // creates an execcmd struct to store 
 // the args and environ vars of the command
-static struct cmd* exec_cmd_create(int back) {
+static struct cmd* exec_cmd_create() {
 
 	struct execcmd* e;
 	
 	e = (struct execcmd*)calloc(sizeof(*e), sizeof(*e));
 	e->type = EXEC;
 	
-	if (back)
-		e->type = BACK;
-	
 	return (struct cmd*)e;
+}
+
+// creates a backcmd struct to store the
+// backgroung command to be executed
+static struct cmd* back_cmd_create(struct cmd* c) {
+
+	struct backcmd* b;
+
+	b = (struct backcmd*)calloc(sizeof(*b), sizeof(*b));
+	b->type = BACK;
+	b->c = c;
+
+	return (struct cmd*)b;
 }
 
 // parses one single command having into account:
 // - the arguments passed to the program
 // - stdin/stdout/stderr flow changes
 // - environment variables (expand and set)
-static struct cmd* parse_exec(char* buf_cmd, int back) {
+static struct cmd* parse_exec(char* buf_cmd) {
 
 	struct execcmd* c;
 	char* tok;
 	int idx = 0, argc = 0;
 	
-	c = (struct execcmd*)exec_cmd_create(back);
+	c = (struct execcmd*)exec_cmd_create();
 	
 	while (buf_cmd[idx] != END_STRING) {
 	
@@ -524,13 +548,16 @@ static struct cmd* parse_exec(char* buf_cmd, int back) {
 static struct cmd* parse_back(char* buf_cmd) {
 
 	int i = 0;
+	struct cmd* e;
 
 	while (buf_cmd[i] != '&')
 		i++;
 	
 	buf_cmd[i] = END_STRING;
 	
-	return parse_exec(buf_cmd, 1);
+	e = parse_exec(buf_cmd);
+
+	return back_cmd_create(e);
 }
 
 // parses a command and checks if it contains
@@ -549,7 +576,7 @@ static struct cmd* parse_cmd(char* buf_cmd) {
 			buf_cmd[idx - 1] != '>')
 		return parse_back(buf_cmd);
 		
-	return parse_exec(buf_cmd, 0);
+	return parse_exec(buf_cmd);
 }
 
 // encapsulates two commands into one pipe struct
