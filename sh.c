@@ -95,6 +95,7 @@ static void print_status_info(char* cmd) {
 }
 
 static void print_back_info(int back_pid) {
+
 	fprintf(stdout, "%s  [PID=%d] %s\n",
 		COLOR_BLUE, back_pid, COLOR_RESET);
 }
@@ -494,7 +495,7 @@ static struct cmd* exec_cmd_create() {
 }
 
 // creates a backcmd struct to store the
-// backgroung command to be executed
+// background command to be executed
 static struct cmd* back_cmd_create(struct cmd* c) {
 
 	struct backcmd* b;
