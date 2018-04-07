@@ -339,10 +339,6 @@ static void run_shell() {
 
 	while ((cmd = read_line(promt)) != NULL)
 		run_cmd(cmd);
-
-	// frees the space 
-	// of the handler´s stack
-	free(ss.ss_sp);
 }
 
 // initialize the shell
@@ -385,12 +381,21 @@ static void init_shell() {
 	sigaction(SIGCHLD, &act, NULL);
 }
 
+static void end_shell() {
+
+	// frees the space 
+	// of the handler´s stack
+	free(ss.ss_sp);
+}
+
 int main(void) {
 
 	init_shell();
 
 	run_shell();
-	
+
+	end_shell();
+
 	return 0;
 }
 
