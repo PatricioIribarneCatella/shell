@@ -40,4 +40,6 @@
 #define READ 0
 #define WRITE 1
 
+#define EXIT_SHELL 1
+
 #endif //DEFS_H

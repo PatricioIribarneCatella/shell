@@ -32,17 +32,14 @@ void sig_handler(int num) {
 	}
 }
 
-// exists nicely
-static void exit_shell(char* cmd) {
+// returns true if the 'exit' call
+// should be performed
+static int exit_shell(char* cmd) {
 
-	if (strcmp(cmd, "exit") == 0) {
+	if (strcmp(cmd, "exit") == 0)
+		return 1;
 
-		// frees the space 
-		// of the handler´s stack
-		free(ss.ss_sp);
-		
-		_exit(EXIT_SUCCESS);
-	}
+	return 0;
 }
 
 // returns true if "chdir" was performed
@@ -263,7 +260,7 @@ static void exec_cmd(struct cmd* cmd) {
 }
 
 // runs the command in 'cmd'
-static void run_cmd(char* cmd) {
+static int run_cmd(char* cmd) {
 	
 	pid_t p, w;
 	struct cmd *parsed;
@@ -271,15 +268,16 @@ static void run_cmd(char* cmd) {
 	// if the "enter" key is pressed
 	// just print the promt again
 	if (cmd[0] == END_STRING)
-		return;
-	
+		return 0;
+
 	// chdir has to be called within the father,
 	// not the child.
 	if (cd(cmd))
-		return;
+		return 0;
 
 	// exit command must be called in the father
-	exit_shell(cmd);
+	if (exit_shell(cmd))
+		return EXIT_SHELL;
 
 	// parses the command line
 	parsed = parse_line(cmd);
@@ -309,7 +307,7 @@ static void run_cmd(char* cmd) {
 		back = p;
 		print_back_info(back);
 
-		return;
+		return 0;
 	}
 
 	// waits for the process to finish
@@ -331,14 +329,19 @@ static void run_cmd(char* cmd) {
 		print_status_info(cmd);
 
 	free_command(parsed);
+
+	return 0;
 }
 
+// runs a shell command
 static void run_shell() {
 
 	char* cmd;
 
-	while ((cmd = read_line(promt)) != NULL)
-		run_cmd(cmd);
+	while ((cmd = read_line(promt)) != NULL) {
+		if (run_cmd(cmd) == EXIT_SHELL)
+			return;
+	}
 }
 
 // initialize the shell
@@ -381,10 +384,10 @@ static void init_shell() {
 	sigaction(SIGCHLD, &act, NULL);
 }
 
+// frees the space 
+// of the handler´s stack
 static void end_shell() {
-
-	// frees the space 
-	// of the handler´s stack
+	
 	free(ss.ss_sp);
 }
 
