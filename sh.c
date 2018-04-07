@@ -107,19 +107,6 @@ static void get_environ_value(char* arg, char* value, int idx) {
 	value[j] = END_STRING;
 }
 
-// opens the file in which the stdin or
-// stdout flow will be redirected
-static int open_redir_fd(char* file) {
-
-	int fd;
-
-	fd = open(file,
-		O_TRUNC | O_CLOEXEC | O_RDWR | O_CREAT,
-		S_IRUSR | S_IWUSR);
-
-	return fd;
-}
-
 // sets the environment variables passed
 // in the command line
 static void set_environ_vars(char** eargv, int eargc) {
@@ -138,32 +125,45 @@ static void set_environ_vars(char** eargv, int eargc) {
 	}
 } 
 
+// opens the file in which the stdin or
+// stdout flow will be redirected
+static int open_redir_fd(char* file) {
+
+	int fd;
+
+	fd = open(file,
+		O_TRUNC | O_CLOEXEC | O_RDWR | O_CREAT,
+		S_IRUSR | S_IWUSR);
+
+	return fd;
+}
+
 // executes a command - does not return
 static void exec_cmd(struct cmd* cmd) {
 
-	struct execcmd exec;
-	struct execcmd redir;
-	struct pipecmd pipe_cmd;
-	struct backcmd back_cmd;
+	struct execcmd e_cmd;
+	struct execcmd r_cmd;
+	struct pipecmd p_cmd;
+	struct backcmd b_cmd;
 	int p[2];
 
 	switch (cmd->type) {
 
 		case EXEC:
-			exec = *(struct execcmd*)cmd;
+			e_cmd = *(struct execcmd*)cmd;
 
-			set_environ_vars(exec.eargv, exec.eargc);
+			set_environ_vars(e_cmd.eargv, e_cmd.eargc);
 			
-			execvp(exec.argv[0], exec.argv);
+			execvp(e_cmd.argv[0], e_cmd.argv);
 			
-			fprintf(stderr, "cannot exec %s\n", exec.argv[0]);
+			fprintf(stderr, "cannot exec %s\n", e_cmd.argv[0]);
 			perror(NULL);
 
 			_exit(EXIT_FAILURE);
 			break;
 
 		case BACK: {
-			back_cmd = *(struct backcmd*)cmd;
+			b_cmd = *(struct backcmd*)cmd;
 
 			// sets the current 
 			// process group id
@@ -171,19 +171,19 @@ static void exec_cmd(struct cmd* cmd) {
 			// calling process
 			setpgid(0, 0);
 			
-			exec_cmd(back_cmd.c);
+			exec_cmd(b_cmd.c);
 			break;
 		}
 
 		case REDIR: {
 			// changes the input/output flow
-			redir = *(struct execcmd*)cmd;
+			r_cmd = *(struct execcmd*)cmd;
 			int fd_in, fd_out, fd_err;
 			
 			// stdin redirection
-			if (strlen(redir.in_file) > 0) {
-				if ((fd_in = open_redir_fd(redir.in_file)) < 0) {
-					fprintf(stderr, "cannot open file: %s\n", redir.in_file);
+			if (strlen(r_cmd.in_file) > 0) {
+				if ((fd_in = open_redir_fd(r_cmd.in_file)) < 0) {
+					fprintf(stderr, "cannot open file: %s\n", r_cmd.in_file);
 					perror(NULL);
 					_exit(EXIT_FAILURE);
 				}
@@ -192,9 +192,9 @@ static void exec_cmd(struct cmd* cmd) {
 			}
 			
 			// stdout redirection
-			if (strlen(redir.out_file) > 0) {
-				if ((fd_out = open_redir_fd(redir.out_file)) < 0) {
-					fprintf(stderr, "cannot open file: %s\n", redir.out_file);
+			if (strlen(r_cmd.out_file) > 0) {
+				if ((fd_out = open_redir_fd(r_cmd.out_file)) < 0) {
+					fprintf(stderr, "cannot open file: %s\n", r_cmd.out_file);
 					perror(NULL);
 					_exit(EXIT_FAILURE);
 				}
@@ -203,12 +203,12 @@ static void exec_cmd(struct cmd* cmd) {
 			}
 
 			// stderr redirection
-			if (strlen(redir.err_file) > 0) {
-				if (strcmp(redir.err_file, "&1") == 0) {
+			if (strlen(r_cmd.err_file) > 0) {
+				if (strcmp(r_cmd.err_file, "&1") == 0) {
 					fd_err = STDOUT_FILENO;
 				}
-				else if ((fd_err = open_redir_fd(redir.err_file)) < 0) {
-					fprintf(stderr, "cannot open file: %s\n", redir.err_file);
+				else if ((fd_err = open_redir_fd(r_cmd.err_file)) < 0) {
+					fprintf(stderr, "cannot open file: %s\n", r_cmd.err_file);
 					perror(NULL);
 					_exit(EXIT_FAILURE);
 				}
@@ -223,7 +223,7 @@ static void exec_cmd(struct cmd* cmd) {
 		
 		case PIPE: {
 			// pipes two commands
-			pipe_cmd = *(struct pipecmd*)cmd;
+			p_cmd = *(struct pipecmd*)cmd;
 			
 			if (pipe(p) < 0) {
 				fprintf(stderr, "pipe creation failed\n");
@@ -235,14 +235,14 @@ static void exec_cmd(struct cmd* cmd) {
 				dup2(p[WRITE], STDOUT_FILENO);
 				close(p[READ]);
 				close(p[WRITE]);
-				exec_cmd(pipe_cmd.leftcmd);
+				exec_cmd(p_cmd.leftcmd);
 			}
 			
 			if (fork() == 0) {
 				dup2(p[READ], STDIN_FILENO);
 				close(p[READ]);
 				close(p[WRITE]);
-				exec_cmd(pipe_cmd.rightcmd);
+				exec_cmd(p_cmd.rightcmd);
 			}
 			
 			close(p[READ]);
