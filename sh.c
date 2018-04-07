@@ -338,10 +338,9 @@ static void run_shell() {
 
 	char* cmd;
 
-	while ((cmd = read_line(promt)) != NULL) {
+	while ((cmd = read_line(promt)) != NULL)
 		if (run_cmd(cmd) == EXIT_SHELL)
 			return;
-	}
 }
 
 // initialize the shell
