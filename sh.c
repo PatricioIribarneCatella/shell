@@ -1,59 +1,21 @@
 #include "defs.h"
 #include "types.h"
+#include "readline.h"
+#include "createcmd.h"
+#include "freecmd.h"
 
 /* Global variables */
 static int status;
 static pid_t back;
 static stack_t ss;
-static int background;
 static struct cmd* parsed_back;
 static struct cmd* parsed_pipe;
 
 static char back_cmd[BUFLEN];
-static char buffer[BUFLEN];
 static char promt[PRMTLEN];
 
-// frees the memory allocated 
-// for the tree structure command
-static void free_command(struct cmd* cmd) {
+int background = 0;
 
-	int i;
-	struct pipecmd* p;
-	struct execcmd* e;
-
-	if (cmd->type == PIPE) {
-		
-		p = (struct pipecmd*)cmd;
-		
-		free_command(p->leftcmd);
-		free_command(p->rightcmd);
-		
-		free(p);
-		return;
-	}
-
-	e = (struct execcmd*)cmd;
-
-	for (i = 0; i < e->argc; i++)
-		free(e->argv[i]);
-
-	for (i = 0; i < e->eargc; i++)
-		free(e->eargv[i]);
-
-	free(e);
-}
-
-// frees the memory allocated for
-// the background structure
-static void free_back_command(struct cmd* back) {
-
-	struct backcmd* b;
-
-	b = (struct backcmd*)back;
-
-	free_command(b->c);
-	free(b);
-}
 
 /* Handler function for SIGCHLD signal */
 void sig_handler(int num) {
@@ -153,41 +115,6 @@ static int cd(char* cmd) {
 	return 0;
 }
 
-// read a line from the standar input
-// and prints the prompt
-static char* read_line(const char* promt) {
-
-	int i = 0,
-	    c = 0;
-
-	memset(buffer, 0, BUFLEN);
-	
-	// signal handler sets
-	// 'background' in true
-	if (background) {
-		background = 0;
-		return buffer;
-	}
-
-	fprintf(stdout, "%s %s %s\n", COLOR_RED, promt, COLOR_RESET);
-	fprintf(stdout, "%s", "$ ");
-
-	c = getchar();
-
-	while (c != END_LINE && c != EOF) {
-		buffer[i++] = c;
-		c = getchar();
-	}
-		
-	// if the user press ctrl+D
-	// just exit normally
-	if (c == EOF && !background)
-		return NULL;
-
-	buffer[i] = END_STRING;
-
-	return buffer;
-}
 
 // sets the "key" argument with the key part of
 // the "arg" argument and null-terminates it
@@ -482,30 +409,6 @@ static char* expand_environ_var(char* arg) {
 	return arg;
 }
 
-// creates an execcmd struct to store 
-// the args and environ vars of the command
-static struct cmd* exec_cmd_create() {
-
-	struct execcmd* e;
-	
-	e = (struct execcmd*)calloc(sizeof(*e), sizeof(*e));
-	e->type = EXEC;
-	
-	return (struct cmd*)e;
-}
-
-// creates a backcmd struct to store the
-// background command to be executed
-static struct cmd* back_cmd_create(struct cmd* c) {
-
-	struct backcmd* b;
-
-	b = (struct backcmd*)calloc(sizeof(*b), sizeof(*b));
-	b->type = BACK;
-	b->c = c;
-
-	return (struct cmd*)b;
-}
 
 // parses one single command having into account:
 // - the arguments passed to the program
@@ -580,22 +483,6 @@ static struct cmd* parse_cmd(char* buf_cmd) {
 	return parse_exec(buf_cmd);
 }
 
-// encapsulates two commands into one pipe struct
-static struct cmd* pipe_cmd_create(struct cmd* left, struct cmd* right) {
-
-	if (!right)
-		return left;
-	
-	struct pipecmd* p;
-
-	p = (struct pipecmd*)calloc(sizeof(*p), sizeof(*p));
-	
-	p->type = PIPE;
-	p->leftcmd = left;
-	p->rightcmd = right;
-	
-	return (struct cmd*)p;
-}
 
 // splits a string line in two
 // acording to the splitter character
