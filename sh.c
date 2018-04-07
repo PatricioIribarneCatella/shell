@@ -13,10 +13,9 @@ static pid_t back;
 static stack_t ss;
 static struct cmd* parsed_back;
 static struct cmd* parsed_pipe;
-
 static char back_cmd[BUFLEN];
-char promt[PRMTLEN] = {0};
 
+char promt[PRMTLEN] = {0};
 int status = 0;
 int background = 0;
 
