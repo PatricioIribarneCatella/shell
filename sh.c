@@ -6,6 +6,7 @@
 #include "printstatus.h"
 #include "parsing.h"
 #include "utils.h"
+#include "builtin.h"
 
 /* Global variables */
 static pid_t back;
@@ -14,7 +15,7 @@ static struct cmd* parsed_back;
 static struct cmd* parsed_pipe;
 
 static char back_cmd[BUFLEN];
-static char promt[PRMTLEN];
+char promt[PRMTLEN] = {0};
 
 int status = 0;
 int background = 0;
@@ -30,56 +31,6 @@ void sig_handler(int num) {
 		background = 1;
 		free_back_command(parsed_back);
 	}
-}
-
-// returns true if the 'exit' call
-// should be performed
-static int exit_shell(char* cmd) {
-
-	if (strcmp(cmd, "exit") == 0)
-		return 1;
-
-	return 0;
-}
-
-// returns true if "chdir" was performed
-static int cd(char* cmd) {
-
-	char* dir;
-
-	if (cmd[0] == 'c' && cmd[1] == 'd' &&
-		(cmd[2] == ' ' || cmd[2] == END_STRING)) {
-
-		if (cmd[2] == END_STRING) {
-			// change to HOME			
-			dir = getenv("HOME");
-		
-		} else if (cmd[2] == ' ' && cmd[3] == '$') {
-			// expand variable and change to it
-			dir = getenv(cmd + 4);
-
-		} else {
-			// change to the arg especified in 'cd'
-			dir = cmd + 3;
-		}
-
-		if (chdir(dir) < 0) {
-			fprintf(stderr, "cannot cd to %s\n", dir);
-			perror(NULL);
-		} else {
-			memset(promt, 0, PRMTLEN);
-			strcat(promt, "(");
-			char* cwd = getcwd(NULL, 0);
-			strcat(promt, cwd);
-			free(cwd);
-			strcat(promt, ")");
-			status = 0;
-		}
-
-		return 1;
-	}
-
-	return 0;
 }
 
 // sets the "key" argument with the key part of
@@ -343,6 +294,13 @@ static void run_shell() {
 			return;
 }
 
+// frees the space 
+// of the handler´s stack
+static void end_shell() {
+	
+	free(ss.ss_sp);
+}
+
 // initialize the shell
 // with the "HOME" directory
 static void init_shell() {
@@ -381,13 +339,6 @@ static void init_shell() {
 	act.sa_mask = sig;
 	
 	sigaction(SIGCHLD, &act, NULL);
-}
-
-// frees the space 
-// of the handler´s stack
-static void end_shell() {
-	
-	free(ss.ss_sp);
 }
 
 int main(void) {
