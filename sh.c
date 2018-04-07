@@ -3,9 +3,9 @@
 #include "readline.h"
 #include "createcmd.h"
 #include "freecmd.h"
+#include "printstatus.h"
 
 /* Global variables */
-static int status;
 static pid_t back;
 static stack_t ss;
 static struct cmd* parsed_back;
@@ -14,8 +14,8 @@ static struct cmd* parsed_pipe;
 static char back_cmd[BUFLEN];
 static char promt[PRMTLEN];
 
+int status = 0;
 int background = 0;
-
 
 /* Handler function for SIGCHLD signal */
 void sig_handler(int num) {
@@ -30,37 +30,6 @@ void sig_handler(int num) {
 	}
 }
 
-// prints information of process' status
-static void print_status_info(char* cmd) {
-	
-	if (strlen(cmd) == 0)
-		return;
-
-	if (WIFEXITED(status)) {
-
-		fprintf(stdout, "%s	Program: %s exited, status: %d %s\n",
-			COLOR_BLUE, cmd, WEXITSTATUS(status), COLOR_RESET);
-		status = WEXITSTATUS(status);
-
-	} else if (WIFSIGNALED(status)) {
-
-		fprintf(stdout, "%s	Program: %s killed, status: %d %s\n",
-			COLOR_BLUE, cmd, -WTERMSIG(status), COLOR_RESET);
-		status = -WTERMSIG(status);
-
-	} else if (WTERMSIG(status)) {
-
-		fprintf(stdout, "%s	Program: %s stopped, status: %d %s\n",
-			COLOR_BLUE, cmd, -WSTOPSIG(status), COLOR_RESET);
-		status = -WSTOPSIG(status);
-	}
-}
-
-static void print_back_info(int back_pid) {
-
-	fprintf(stdout, "%s  [PID=%d] %s\n",
-		COLOR_BLUE, back_pid, COLOR_RESET);
-}
 
 // exists nicely
 static void exit_shell(char* cmd) {
