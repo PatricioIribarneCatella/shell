@@ -5,7 +5,6 @@
 #include "freecmd.h"
 #include "printstatus.h"
 #include "parsing.h"
-#include "utils.h"
 #include "builtin.h"
 #include "exec.h"
 
