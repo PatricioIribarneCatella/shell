@@ -6,13 +6,14 @@
 
 /* Global variables */
 stack_t ss;
-struct cmd* parsed_back;
-struct cmd* parsed_pipe;
-pid_t back = 0;
-int status = 0;
-int background = 0;
 char promt[PRMTLEN] = {0};
-char back_cmd[BUFLEN] = {0};
+int background = 0;
+
+/* Extern variables */
+extern pid_t back;
+extern int status;
+extern char back_cmd[BUFLEN];
+extern struct cmd* parsed_back;
 
 /* Handler function for SIGCHLD signal */
 void sig_handler(int num) {
@@ -35,13 +36,6 @@ static void run_shell() {
 	while ((cmd = read_line(promt)) != NULL)
 		if (run_cmd(cmd) == EXIT_SHELL)
 			return;
-}
-
-// frees the space 
-// of the handler´s stack
-static void end_shell() {
-	
-	free(ss.ss_sp);
 }
 
 // initialize the shell
@@ -83,6 +77,13 @@ static void init_shell() {
 	act.sa_mask = sig;
 	
 	sigaction(SIGCHLD, &act, NULL);
+}
+
+// frees the space 
+// of the handler´s stack
+static void end_shell() {
+	
+	free(ss.ss_sp);
 }
 
 int main(void) {

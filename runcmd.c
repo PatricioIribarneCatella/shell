@@ -1,5 +1,13 @@
 #include "runcmd.h"
 
+struct cmd* parsed_pipe;
+struct cmd* parsed_back;
+
+int status = 0;
+pid_t back = 0;
+
+char back_cmd[BUFLEN] = {0};
+
 // runs the command in 'cmd'
 int run_cmd(char* cmd) {
 	
