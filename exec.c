@@ -60,6 +60,7 @@ void exec_cmd(struct cmd* cmd) {
 	struct execcmd r_cmd;
 	struct pipecmd p_cmd;
 	struct backcmd b_cmd;
+	char buf[BUFLEN];
 	int p[2];
 
 	switch (cmd->type) {
@@ -71,8 +72,9 @@ void exec_cmd(struct cmd* cmd) {
 			
 			execvp(e_cmd.argv[0], e_cmd.argv);
 			
-			fprintf(stderr, "cannot exec %s\n", e_cmd.argv[0]);
-			perror(NULL);
+			memset(buf, 0, BUFLEN);
+			snprintf(buf, sizeof buf, "cannot exec %s ", e_cmd.argv[0]);
+			perror(buf);
 
 			_exit(EXIT_FAILURE);
 			break;
@@ -98,8 +100,9 @@ void exec_cmd(struct cmd* cmd) {
 			// stdin redirection
 			if (strlen(r_cmd.in_file) > 0) {
 				if ((fd_in = open_redir_fd(r_cmd.in_file)) < 0) {
-					fprintf(stderr, "cannot open file: %s\n", r_cmd.in_file);
-					perror(NULL);
+					memset(buf, 0, BUFLEN);
+					snprintf(buf, sizeof buf, "cannot open file: %s ", r_cmd.in_file);
+					perror(buf);
 					_exit(EXIT_FAILURE);
 				}
 				if (fd_in >= 0)
@@ -109,8 +112,9 @@ void exec_cmd(struct cmd* cmd) {
 			// stdout redirection
 			if (strlen(r_cmd.out_file) > 0) {
 				if ((fd_out = open_redir_fd(r_cmd.out_file)) < 0) {
-					fprintf(stderr, "cannot open file: %s\n", r_cmd.out_file);
-					perror(NULL);
+					memset(buf, 0, BUFLEN);
+					snprintf(buf, sizeof buf, "cannot open file: %s ", r_cmd.out_file);
+					perror(buf);
 					_exit(EXIT_FAILURE);
 				}
 				if (fd_out >= 0)
@@ -123,8 +127,9 @@ void exec_cmd(struct cmd* cmd) {
 					fd_err = STDOUT_FILENO;
 				}
 				else if ((fd_err = open_redir_fd(r_cmd.err_file)) < 0) {
-					fprintf(stderr, "cannot open file: %s\n", r_cmd.err_file);
-					perror(NULL);
+					memset(buf, 0, BUFLEN);
+					snprintf(buf, sizeof buf, "cannot open file: %s ", r_cmd.err_file);
+					perror(buf);
 					_exit(EXIT_FAILURE);
 				}
 				if (fd_err >= 0)
@@ -141,8 +146,9 @@ void exec_cmd(struct cmd* cmd) {
 			p_cmd = *(struct pipecmd*)cmd;
 			
 			if (pipe(p) < 0) {
-				fprintf(stderr, "pipe creation failed\n");
-				perror(NULL);
+				memset(buf, 0, sizeof buf);
+				snprintf(buf, sizeof buf, "pipe creation failed ");
+				perror(buf);
 				_exit(EXIT_FAILURE);
 			}
 			

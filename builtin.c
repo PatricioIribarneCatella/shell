@@ -14,6 +14,7 @@ int exit_shell(char* cmd) {
 int cd(char* cmd) {
 
 	char* dir;
+	char buf[BUFLEN] = {0};
 
 	if (cmd[0] == 'c' && cmd[1] == 'd' &&
 		(cmd[2] == ' ' || cmd[2] == END_STRING)) {
@@ -32,15 +33,13 @@ int cd(char* cmd) {
 		}
 
 		if (chdir(dir) < 0) {
-			fprintf(stderr, "cannot cd to %s\n", dir);
-			perror(NULL);
+			snprintf(buf, sizeof buf, "cannot cd to %s ", dir);
+			perror(buf);
 		} else {
 			memset(promt, 0, PRMTLEN);
-			strcat(promt, "(");
 			char* cwd = getcwd(NULL, 0);
-			strcat(promt, cwd);
+			snprintf(promt, sizeof promt, "(%s)", cwd);
 			free(cwd);
-			strcat(promt, ")");
 			status = 0;
 		}
 
