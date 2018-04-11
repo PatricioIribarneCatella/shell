@@ -7,6 +7,7 @@ void free_command(struct cmd* cmd) {
 	int i;
 	struct pipecmd* p;
 	struct execcmd* e;
+	struct backcmd* b;
 
 	if (cmd->type == PIPE) {
 		
@@ -19,6 +20,15 @@ void free_command(struct cmd* cmd) {
 		return;
 	}
 
+	if (cmd->type == BACK) {
+		
+		b = (struct backcmd*)cmd;
+
+		free_command(b->c);
+		free(b);
+		return;
+	}
+
 	e = (struct execcmd*)cmd;
 
 	for (i = 0; i < e->argc; i++)
@@ -28,17 +38,5 @@ void free_command(struct cmd* cmd) {
 		free(e->eargv[i]);
 
 	free(e);
-}
-
-// frees the memory allocated for
-// the background structure
-void free_back_command(struct cmd* back) {
-
-	struct backcmd* b;
-
-	b = (struct backcmd*)back;
-
-	free_command(b->c);
-	free(b);
 }
 

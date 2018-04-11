@@ -45,7 +45,7 @@ int run_cmd(char* cmd) {
 	// doesn´t wait for it to finish
 	if (parsed->type == BACK) {
 		
-		free_back_command(parsed);
+		free_command(parsed);
 		
 		strcpy(back_cmd, cmd);
 		back = p;
