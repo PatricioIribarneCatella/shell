@@ -2,12 +2,14 @@
 
 // creates an execcmd struct to store 
 // the args and environ vars of the command
-struct cmd* exec_cmd_create() {
+struct cmd* exec_cmd_create(char* buf_cmd) {
 
 	struct execcmd* e;
 	
 	e = (struct execcmd*)calloc(sizeof(*e), sizeof(*e));
+
 	e->type = EXEC;
+	strcpy(e->scmd, buf_cmd);
 	
 	return (struct cmd*)e;
 }
@@ -19,7 +21,9 @@ struct cmd* back_cmd_create(struct cmd* c) {
 	struct backcmd* b;
 
 	b = (struct backcmd*)calloc(sizeof(*b), sizeof(*b));
+	
 	b->type = BACK;
+	strcpy(b->scmd, c->scmd);
 	b->c = c;
 
 	return (struct cmd*)b;

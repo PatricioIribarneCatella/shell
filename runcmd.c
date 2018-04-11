@@ -1,17 +1,15 @@
 #include "runcmd.h"
 
 struct cmd* parsed_pipe;
-
+struct cmd* back_cmds = {0};
 int status = 0;
-pid_t back = 0;
-
-char back_cmd[BUFLEN] = {0};
 
 // runs the command in 'cmd'
 int run_cmd(char* cmd) {
 	
 	pid_t p, w;
 	struct cmd *parsed;
+
 
 	// if the "enter" key is pressed
 	// just print the promt again
@@ -29,7 +27,7 @@ int run_cmd(char* cmd) {
 
 	// parses the command line
 	parsed = parse_line(cmd);
-
+	
 	// forks and run the command
 	if ((p = fork()) == 0) {
 		
@@ -42,15 +40,14 @@ int run_cmd(char* cmd) {
 		exec_cmd(parsed);
 	}
 
+	parsed->pid = p;
+
 	// doesn´t wait for it to finish
 	if (parsed->type == BACK) {
-		
-		free_command(parsed);
-		
-		strcpy(back_cmd, cmd);
-		back = p;
 
-		print_back_info(back);
+		back_cmds = parsed;
+
+		print_back_info(parsed);
 
 		return 0;
 	}
@@ -70,8 +67,7 @@ int run_cmd(char* cmd) {
 	if (w < 0 && errno == EINTR)
 		waitpid(p, &status, 0);
 
-	if (parsed->type != PIPE)
-		print_status_info(cmd);
+	print_status_info(parsed);
 
 	free_command(parsed);
 

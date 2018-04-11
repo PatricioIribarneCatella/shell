@@ -5,10 +5,14 @@
 
 struct cmd {
 	int type;
+	pid_t pid;
+	char scmd[BUFLEN];
 };
 
 struct execcmd {
 	int type;
+	pid_t pid;
+	char scmd[BUFLEN];
 	int argc;
 	int eargc;
 	char out_file[FNAMESIZE];
@@ -20,12 +24,16 @@ struct execcmd {
 
 struct pipecmd {
 	int type;
+	pid_t pid;
+	char scmd[BUFLEN];
 	struct cmd* leftcmd;
 	struct cmd* rightcmd;
 };
 
 struct backcmd {
 	int type;
+	pid_t pid;
+	char scmd[BUFLEN];
 	struct cmd* c;
 };
 

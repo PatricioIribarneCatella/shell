@@ -113,7 +113,7 @@ static struct cmd* parse_exec(char* buf_cmd) {
 	char* tok;
 	int idx = 0, argc = 0;
 	
-	c = (struct execcmd*)exec_cmd_create();
+	c = (struct execcmd*)exec_cmd_create(buf_cmd);
 	
 	while (buf_cmd[idx] != END_STRING) {
 	

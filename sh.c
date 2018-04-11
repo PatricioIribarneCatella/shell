@@ -10,9 +10,8 @@ char promt[PRMTLEN] = {0};
 int background = 0;
 
 /* Extern variables */
-extern pid_t back;
 extern int status;
-extern char back_cmd[BUFLEN];
+extern struct cmd* back_cmds;
 
 /* Handler function for SIGCHLD signal */
 void sig_handler(int num) {
@@ -20,13 +19,15 @@ void sig_handler(int num) {
 	char buf[BUFLEN] = {0};
 	fflush(stdout);
 
-	if (back != 0 && waitpid(back, &status, WNOHANG) > 0) {
+	if (back_cmds != NULL && waitpid(back_cmds->pid, &status, WNOHANG) > 0) {
 	
 		snprintf(buf, sizeof buf, "%s	process %d done [%s], status: %d %s\n",
-			COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
+			COLOR_BLUE, back_cmds->pid, back_cmds->scmd, WEXITSTATUS(status), COLOR_RESET);
 		
 		write(STDOUT_FILENO, buf, sizeof buf);
 		
+		free_command(back_cmds);
+
 		background = 1;
 	}
 }
