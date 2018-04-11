@@ -13,7 +13,6 @@ int background = 0;
 extern pid_t back;
 extern int status;
 extern char back_cmd[BUFLEN];
-extern struct cmd* parsed_back;
 
 /* Handler function for SIGCHLD signal */
 void sig_handler(int num) {
@@ -22,11 +21,13 @@ void sig_handler(int num) {
 	fflush(stdout);
 
 	if (back != 0 && waitpid(back, &status, WNOHANG) > 0) {
+	
 		snprintf(buf, sizeof buf, "%s	process %d done [%s], status: %d %s\n",
 			COLOR_BLUE, back, back_cmd, WEXITSTATUS(status), COLOR_RESET);
+		
 		write(STDOUT_FILENO, buf, sizeof buf);
+		
 		background = 1;
-		free_back_command(parsed_back);
 	}
 }
 

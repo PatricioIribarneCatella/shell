@@ -1,7 +1,6 @@
 #include "runcmd.h"
 
 struct cmd* parsed_pipe;
-struct cmd* parsed_back;
 
 int status = 0;
 pid_t back = 0;
@@ -46,14 +45,11 @@ int run_cmd(char* cmd) {
 	// doesn´t wait for it to finish
 	if (parsed->type == BACK) {
 		
+		free_back_command(parsed);
+		
 		strcpy(back_cmd, cmd);
-		
-		// keep a reference
-		// to the parsed back cmd
-		// to free it when it finishes
-		parsed_back = parsed;
-		
 		back = p;
+
 		print_back_info(back);
 
 		return 0;
