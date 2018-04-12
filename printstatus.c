@@ -4,10 +4,10 @@ static void print_pipe_info(struct cmd* c) {
 
 	struct pipecmd* p;
 
-	p = (struct pipecmd*)c;
-
 	if (c->type == PIPE) {
 		
+		p = (struct pipecmd*)c;
+
 		print_pipe_info(p->leftcmd);
 
 		printf("%s", "|");
@@ -25,13 +25,19 @@ static void print_pipe_info(struct cmd* c) {
 // prints information of process' status
 void print_status_info(struct cmd* cmd) {
 
-	if (strlen(cmd->scmd) == 0)
+	if (strlen(cmd->scmd) == 0
+		&& cmd->type != PIPE)
 		return;
 	
 	if (cmd->type == PIPE) {
-		printf("%s", "Command: [");
+
+		fprintf(stdout, "%s	Command: [", COLOR_BLUE);
+		
 		print_pipe_info(cmd);
-		printf("%s\n", "] done");
+		
+		fprintf(stdout, "] done %s\n", COLOR_RESET);
+		
+		return;
 	}
 
 	if (WIFEXITED(status)) {

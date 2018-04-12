@@ -68,7 +68,7 @@ int run_cmd(char* cmd) {
 		waitpid(p, &status, 0);
 
 	print_status_info(parsed);
-
+	
 	free_command(parsed);
 
 	return 0;
