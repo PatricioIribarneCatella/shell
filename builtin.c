@@ -14,6 +14,7 @@ int exit_shell(char* cmd) {
 int cd(char* cmd) {
 
 	char* dir;
+	char* cwd, *old_cwd;
 	char buf[BUFLEN] = {0};
 
 	if (cmd[0] == 'c' && cmd[1] == 'd' &&
@@ -27,21 +28,34 @@ int cd(char* cmd) {
 			// expand variable and change to it
 			dir = getenv(cmd + 4);
 
+		} else if (cmd[2] == ' ' && cmd[3] == '-') {
+			// change to the previous cwd
+			dir = getenv("OLDPWD");
+
 		} else {
 			// change to the arg especified in 'cd'
 			dir = cmd + 3;
 		}
+
+		old_cwd = getcwd(NULL, 0);
 
 		if (chdir(dir) < 0) {
 			snprintf(buf, sizeof buf, "cannot cd to %s ", dir);
 			perror(buf);
 		} else {
 			memset(promt, 0, PRMTLEN);
-			char* cwd = getcwd(NULL, 0);
+			cwd = getcwd(NULL, 0);
+
 			snprintf(promt, sizeof promt, "(%s)", cwd);
+			
+			setenv("PWD", cwd, 1);
+			setenv("OLDPWD", old_cwd, 1);
+			
 			free(cwd);
 			status = 0;
 		}
+
+		free(old_cwd);
 
 		return 1;
 	}

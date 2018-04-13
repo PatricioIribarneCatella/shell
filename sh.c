@@ -54,6 +54,8 @@ static void init_shell() {
 		perror(buf);
 	} else {
 		snprintf(promt, sizeof promt, "(%s)", home);
+		setenv("PWD", home, 1);
+		setenv("OLDPWD", home, 1);
 	}
 	
 	// allocates space 
