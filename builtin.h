@@ -8,6 +8,8 @@ extern int status;
 
 int cd(char* cmd);
 
+int pwd(char* cmd);
+
 int exit_shell(char* cmd);
 
 #endif // BUILTIN_H

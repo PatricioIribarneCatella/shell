@@ -10,18 +10,20 @@ int run_cmd(char* cmd) {
 	pid_t p, w;
 	struct cmd *parsed;
 
-
 	// if the "enter" key is pressed
 	// just print the promt again
 	if (cmd[0] == END_STRING)
 		return 0;
 
-	// chdir has to be called within the father,
-	// not the child.
+	// 'cd' built-in call
 	if (cd(cmd))
 		return 0;
 
-	// exit command must be called in the father
+	// 'pwd' buil-in call
+	if (pwd(cmd))
+		return 0;
+
+	// 'exit' built-in call
 	if (exit_shell(cmd))
 		return EXIT_SHELL;
 

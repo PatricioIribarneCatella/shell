@@ -49,3 +49,20 @@ int cd(char* cmd) {
 	return 0;
 }
 
+// returns true if 'pwd' was executed
+int pwd(char* cmd) {
+
+	char buf[BUFLEN];
+
+	if (strcmp(cmd, "pwd") == 0) {
+		
+		getcwd(buf, sizeof buf);
+		
+		printf("%s\n", buf);
+
+		return 1;
+	}
+
+	return 0;
+
+}
