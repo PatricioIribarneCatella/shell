@@ -7,7 +7,6 @@
 /* Global variables */
 stack_t ss;
 char promt[PRMTLEN] = {0};
-int background = 0;
 
 /* Extern variables */
 extern int status;
@@ -27,8 +26,6 @@ void sig_handler(int num) {
 		write(STDOUT_FILENO, buf, sizeof buf);
 		
 		free_command(back_cmds);
-
-		background = 1;
 	}
 }
 

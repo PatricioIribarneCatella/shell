@@ -1,7 +1,7 @@
 #ifndef READLINE_H
 #define READLINE_H
 
-extern int background;
+#include "defs.h"
 
 char* read_line(const char* promt);
 
