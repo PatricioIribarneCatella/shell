@@ -84,18 +84,24 @@ static bool parse_environ_var(struct execcmd* c, char* arg) {
 
 // expand environment variables
 static char* expand_environ_var(char* arg) {
+	
+	char* aux;
+	char s[10];
+	size_t len;
 
 	if (arg[0] == '$') {
-
-		char* aux;
-		char s[10];
-
+		
 		if (arg[1] == '?') {
 			sprintf(s, "%d", status);
 			aux = s;
 		}
 		else
 			aux = getenv(arg + 1);
+
+		len = strlen(aux);
+
+		if (len > ARGSIZE)
+			arg = realloc(arg, (len + 1) * sizeof(char));
 
 		strcpy(arg, aux);
 	}
@@ -123,13 +129,13 @@ static struct cmd* parse_exec(char* buf_cmd) {
 		if (buf_cmd[idx] != END_STRING)
 			idx++;
 		
-		tok = expand_environ_var(tok);
-		
 		if (parse_redir_flow(c, tok))
 			continue;
 		
 		if (parse_environ_var(c, tok))
 			continue;
+		
+		tok = expand_environ_var(tok);
 		
 		c->argv[argc++] = tok;
 	}
