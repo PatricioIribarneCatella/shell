@@ -98,12 +98,16 @@ static char* expand_environ_var(char* arg) {
 		else
 			aux = getenv(arg + 1);
 
-		len = strlen(aux);
+		if (!aux)
+			strcpy(arg, " ");
+		else {
+			len = strlen(aux);
 
-		if (len > ARGSIZE)
-			arg = realloc(arg, (len + 1) * sizeof(char));
-
-		strcpy(arg, aux);
+			if (len > ARGSIZE)
+				arg = realloc(arg, (len + 1) * sizeof(char));
+			
+			strcpy(arg, aux);
+		}
 	}
 	
 	return arg;
