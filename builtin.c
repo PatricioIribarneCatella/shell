@@ -80,3 +80,9 @@ int pwd(char* cmd) {
 	return 0;
 
 }
+
+// returns true if export was performed
+int export_var(char* cmd) {
+	return 0;
+}
+

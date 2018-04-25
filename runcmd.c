@@ -19,10 +19,14 @@ int run_cmd(char* cmd) {
 	if (cd(cmd))
 		return 0;
 
-	// 'pwd' buil-in call
+	// 'pwd' built-in call
 	if (pwd(cmd))
 		return 0;
 
+	// 'export' built-in call
+	if (export_var(cmd))
+		return 0;
+	
 	// 'exit' built-in call
 	if (exit_shell(cmd))
 		return EXIT_SHELL;
