@@ -90,7 +90,9 @@ int export_var(char* cmd) {
 	char key[100], value[100], var[BUFLEN];
 
 	// if no parameter was passed to the 'export' call
-	if (strcmp(cmd, "export") == 0) {
+	if (strcmp(cmd, "export") == 0 ||
+	    strcmp(cmd, "export ") == 0) {
+
 		fprintf(stderr, "missing parameter: KEY=VALUE not faund\n");
 		status = 1;
 		return 1;
