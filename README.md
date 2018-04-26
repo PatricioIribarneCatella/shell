@@ -11,6 +11,7 @@ This project was developed from the scratch and motivated by the topics taught i
 ### Features 
 
 - Command execution with or without arguments
+- Built-in commands: _cd_, _pwd_, _exit_, _export_
 - Environment and magic variables expansion
 - Flow redirection and pipe
 - Command execution with their own environment variables
@@ -34,6 +35,18 @@ Filesystem      Size  Used Avail Use% Mounted on
 tmpfs           8.3G  2.0M  8.3G   1% /tmp
 ```
 
+- Built-in commands: _cd_, _pwd_, _exit_, _export_
+
+```bash
+$ cd Documents
+$ pwd
+ /home/[USER]/Documents
+
+$ export VAR=hello
+$ /usr/bin/env | grep VAR
+VAR=hello
+```
+
 - Environment (and magic - just '?' for now) variables expansion
 
 ```bash
@@ -48,7 +61,7 @@ $ echo $?
 1
 ```
 
-- Standar flow redirection
+- Standard flow redirection
 
 ```bash
 $ ls -C /home /notexist >out.txt 2>err.txt
@@ -73,7 +86,7 @@ $ ls -C /home /notexist 2>&1 | wc -l
 - Command execution with their own environment variables
 
 ```bash
-$ USER=nobody ENVIRON=nothing /usr/bin/env | grep "=no"
+$ USER=nobody ENVIRON=nothing /usr/bin/env | grep =no
 USER=nobody
 ENVIRON=nothing
 ```
