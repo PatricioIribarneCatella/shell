@@ -48,12 +48,15 @@ void exec_cmd(struct cmd* cmd) {
 
 			set_environ_vars(e_cmd.eargv, e_cmd.eargc);
 			
-			execvp(e_cmd.argv[0], e_cmd.argv);
-			
+			execvp(e_cmd.argv[0], e_cmd.argv);	
+		
 			memset(buf, 0, BUFLEN);
 			snprintf(buf, sizeof buf, "cannot exec %s ", e_cmd.argv[0]);
 			perror(buf);
-
+			
+			free(ss.ss_sp);
+			free_command(cmd);
+			
 			_exit(EXIT_FAILURE);
 			break;
 
