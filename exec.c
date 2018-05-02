@@ -20,12 +20,12 @@ static void set_environ_vars(char** eargv, int eargc) {
 
 // opens the file in which the stdin or
 // stdout flow will be redirected
-static int open_redir_fd(char* file) {
+static int open_redir_fd(char* file, int flags) {
 
 	int fd;
 
 	fd = open(file,
-		O_TRUNC | O_CLOEXEC | O_RDWR | O_CREAT,
+		flags | O_CLOEXEC | O_CREAT,
 		S_IRUSR | S_IWUSR);
 
 	return fd;
@@ -80,7 +80,7 @@ void exec_cmd(struct cmd* cmd) {
 			
 			// stdin redirection
 			if (strlen(r_cmd.in_file) > 0) {
-				if ((fd_in = open_redir_fd(r_cmd.in_file)) < 0) {
+				if ((fd_in = open_redir_fd(r_cmd.in_file, O_RDONLY)) < 0) {
 					memset(buf, 0, BUFLEN);
 					snprintf(buf, sizeof buf, "cannot open file: %s ", r_cmd.in_file);
 					perror(buf);
@@ -92,7 +92,7 @@ void exec_cmd(struct cmd* cmd) {
 			
 			// stdout redirection
 			if (strlen(r_cmd.out_file) > 0) {
-				if ((fd_out = open_redir_fd(r_cmd.out_file)) < 0) {
+				if ((fd_out = open_redir_fd(r_cmd.out_file, O_WRONLY | O_TRUNC)) < 0) {
 					memset(buf, 0, BUFLEN);
 					snprintf(buf, sizeof buf, "cannot open file: %s ", r_cmd.out_file);
 					perror(buf);
@@ -107,7 +107,7 @@ void exec_cmd(struct cmd* cmd) {
 				if (strcmp(r_cmd.err_file, "&1") == 0) {
 					fd_err = STDOUT_FILENO;
 				}
-				else if ((fd_err = open_redir_fd(r_cmd.err_file)) < 0) {
+				else if ((fd_err = open_redir_fd(r_cmd.err_file, O_WRONLY | O_TRUNC)) < 0) {
 					memset(buf, 0, BUFLEN);
 					snprintf(buf, sizeof buf, "cannot open file: %s ", r_cmd.err_file);
 					perror(buf);
