@@ -24,14 +24,24 @@ static bool parse_redir_flow(struct execcmd* c, char* arg) {
 
 	// flow redirection for output
 	if ((outIdx = block_contains(arg, '>')) >= 0) {
+		
+		c->mode = O_WRONLY;
+
 		switch (outIdx) {
 			// stdout redir
 			case 0: {
-				strcpy(c->out_file, arg + 1);
+				if (arg[++outIdx] == '>') {
+					c->mode |= O_APPEND;
+					strcpy(c->out_file, arg + 2);
+				} else {
+					c->mode |= O_TRUNC;
+					strcpy(c->out_file, arg + 1);
+				}
 				break;
 			}
 			// stderr redir
 			case 1: {
+				c->mode |= O_TRUNC;
 				strcpy(c->err_file, &arg[outIdx + 1]);
 				break;
 			}
@@ -48,6 +58,7 @@ static bool parse_redir_flow(struct execcmd* c, char* arg) {
 		// stdin redir
 		strcpy(c->in_file, arg + 1);
 		
+		c->mode = O_RDONLY;
 		c->type = REDIR;
 		free(arg);
 		
