@@ -34,24 +34,24 @@ static int open_redir_fd(char* file, int flags) {
 // executes a command - does not return
 void exec_cmd(struct cmd* cmd) {
 
-	struct execcmd e_cmd;
-	struct execcmd r_cmd;
-	struct pipecmd p_cmd;
-	struct backcmd b_cmd;
+	struct execcmd* e;
+	struct execcmd* r;
+	struct pipecmd* p;
+	struct backcmd* b;
 	char buf[BUFLEN];
-	int p[2];
+	int pfd[2];
 
 	switch (cmd->type) {
 
 		case EXEC:
-			e_cmd = *(struct execcmd*)cmd;
+			e = (struct execcmd*)cmd;
 
-			set_environ_vars(e_cmd.eargv, e_cmd.eargc);
+			set_environ_vars(e->eargv, e->eargc);
 			
-			execvp(e_cmd.argv[0], e_cmd.argv);	
+			execvp(e->argv[0], e->argv);	
 		
 			memset(buf, 0, BUFLEN);
-			snprintf(buf, sizeof buf, "cannot exec %s ", e_cmd.argv[0]);
+			snprintf(buf, sizeof buf, "cannot exec %s ", e->argv[0]);
 			perror(buf);
 			
 			free(ss.ss_sp);
@@ -61,7 +61,7 @@ void exec_cmd(struct cmd* cmd) {
 			break;
 
 		case BACK: {
-			b_cmd = *(struct backcmd*)cmd;
+			b = (struct backcmd*)cmd;
 
 			// sets the current 
 			// process group id
@@ -69,52 +69,64 @@ void exec_cmd(struct cmd* cmd) {
 			// calling process
 			setpgid(0, 0);
 			
-			exec_cmd(b_cmd.c);
+			exec_cmd(b->c);
 			break;
 		}
 
 		case REDIR: {
 			// changes the input/output flow
-			r_cmd = *(struct execcmd*)cmd;
+			r = (struct execcmd*)cmd;
 			int fd_in, fd_out, fd_err;
 			
 			// stdin redirection
-			if (strlen(r_cmd.in_file) > 0) {
-				if ((fd_in = open_redir_fd(r_cmd.in_file, r_cmd.mode)) < 0) {
+			if (strlen(r->in_file) > 0) {
+				if ((fd_in = open_redir_fd(r->in_file, r->mode)) < 0) {
 					memset(buf, 0, BUFLEN);
-					snprintf(buf, sizeof buf, "cannot open file: %s ", r_cmd.in_file);
+					snprintf(buf, sizeof buf, "cannot open file: %s ", r->in_file);
 					perror(buf);
 					_exit(EXIT_FAILURE);
 				}
-				if (fd_in >= 0)
-					dup2(fd_in, STDIN_FILENO);
+				if (dup2(fd_in, STDIN_FILENO) < 0) {
+					memset(buf, 0, BUFLEN);
+					snprintf(buf, sizeof buf, "cannot dup stdin file: %s ", r->in_file);
+					perror(buf);
+					_exit(EXIT_FAILURE);
+				}
 			}
 			
 			// stdout redirection
-			if (strlen(r_cmd.out_file) > 0) {
-				if ((fd_out = open_redir_fd(r_cmd.out_file, r_cmd.mode)) < 0) {
+			if (strlen(r->out_file) > 0) {
+				if ((fd_out = open_redir_fd(r->out_file, r->mode)) < 0) {
 					memset(buf, 0, BUFLEN);
-					snprintf(buf, sizeof buf, "cannot open file: %s ", r_cmd.out_file);
+					snprintf(buf, sizeof buf, "cannot open file: %s ", r->out_file);
 					perror(buf);
 					_exit(EXIT_FAILURE);
 				}
-				if (fd_out >= 0)
-					dup2(fd_out, STDOUT_FILENO);
+				if (dup2(fd_out, STDOUT_FILENO) < 0) {
+					memset(buf, 0, BUFLEN);
+					snprintf(buf, sizeof buf, "cannot dup stdout file: %s ", r->out_file);
+					perror(buf);
+					_exit(EXIT_FAILURE);
+				}
 			}
 
 			// stderr redirection
-			if (strlen(r_cmd.err_file) > 0) {
-				if (strcmp(r_cmd.err_file, "&1") == 0) {
+			if (strlen(r->err_file) > 0) {
+				if (strcmp(r->err_file, "&1") == 0) {
 					fd_err = STDOUT_FILENO;
 				}
-				else if ((fd_err = open_redir_fd(r_cmd.err_file, r_cmd.mode)) < 0) {
+				else if ((fd_err = open_redir_fd(r->err_file, r->mode)) < 0) {
 					memset(buf, 0, BUFLEN);
-					snprintf(buf, sizeof buf, "cannot open file: %s ", r_cmd.err_file);
+					snprintf(buf, sizeof buf, "cannot open file: %s ", r->err_file);
 					perror(buf);
 					_exit(EXIT_FAILURE);
 				}
-				if (fd_err >= 0)
-					dup2(fd_err, STDERR_FILENO);
+				if (dup2(fd_err, STDERR_FILENO) < 0) {
+					memset(buf, 0, BUFLEN);
+					snprintf(buf, sizeof buf, "cannot dup stderr file: %s ", r->err_file);
+					perror(buf);
+					_exit(EXIT_FAILURE);
+				}
 			}
 			
 			cmd->type = EXEC;
@@ -124,9 +136,9 @@ void exec_cmd(struct cmd* cmd) {
 		
 		case PIPE: {
 			// pipes two commands
-			p_cmd = *(struct pipecmd*)cmd;
+			p = (struct pipecmd*)cmd;
 			
-			if (pipe(p) < 0) {
+			if (pipe(pfd) < 0) {
 				memset(buf, 0, sizeof buf);
 				snprintf(buf, sizeof buf, "pipe creation failed ");
 				perror(buf);
@@ -134,21 +146,21 @@ void exec_cmd(struct cmd* cmd) {
 			}
 			
 			if (fork() == 0) {
-				dup2(p[WRITE], STDOUT_FILENO);
-				close(p[READ]);
-				close(p[WRITE]);
-				exec_cmd(p_cmd.leftcmd);
+				dup2(pfd[WRITE], STDOUT_FILENO);
+				close(pfd[READ]);
+				close(pfd[WRITE]);
+				exec_cmd(p->leftcmd);
 			}
 			
 			if (fork() == 0) {
-				dup2(p[READ], STDIN_FILENO);
-				close(p[READ]);
-				close(p[WRITE]);
-				exec_cmd(p_cmd.rightcmd);
+				dup2(pfd[READ], STDIN_FILENO);
+				close(pfd[READ]);
+				close(pfd[WRITE]);
+				exec_cmd(p->rightcmd);
 			}
 			
-			close(p[READ]);
-			close(p[WRITE]);
+			close(pfd[READ]);
+			close(pfd[WRITE]);
 		
 			// free the memory allocated
 			// for the pipe tree structure
