@@ -17,7 +17,7 @@ struct execcmd {
 	char* argv[MAXARGS];
 	int eargc;
 	char* eargv[MAXARGS];
-	int mode;
+	int flags;
 	char out_file[FNAMESIZE];
 	char in_file[FNAMESIZE];
 	char err_file[FNAMESIZE];

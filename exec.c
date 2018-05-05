@@ -80,7 +80,7 @@ void exec_cmd(struct cmd* cmd) {
 			
 			// stdin redirection
 			if (strlen(r->in_file) > 0) {
-				if ((fd_in = open_redir_fd(r->in_file, r->mode)) < 0) {
+				if ((fd_in = open_redir_fd(r->in_file, r->flags)) < 0) {
 					memset(buf, 0, BUFLEN);
 					snprintf(buf, sizeof buf, "cannot open file: %s ", r->in_file);
 					perror(buf);
@@ -96,7 +96,7 @@ void exec_cmd(struct cmd* cmd) {
 			
 			// stdout redirection
 			if (strlen(r->out_file) > 0) {
-				if ((fd_out = open_redir_fd(r->out_file, r->mode)) < 0) {
+				if ((fd_out = open_redir_fd(r->out_file, r->flags)) < 0) {
 					memset(buf, 0, BUFLEN);
 					snprintf(buf, sizeof buf, "cannot open file: %s ", r->out_file);
 					perror(buf);
@@ -115,7 +115,7 @@ void exec_cmd(struct cmd* cmd) {
 				if (strcmp(r->err_file, "&1") == 0) {
 					fd_err = STDOUT_FILENO;
 				}
-				else if ((fd_err = open_redir_fd(r->err_file, r->mode)) < 0) {
+				else if ((fd_err = open_redir_fd(r->err_file, r->flags)) < 0) {
 					memset(buf, 0, BUFLEN);
 					snprintf(buf, sizeof buf, "cannot open file: %s ", r->err_file);
 					perror(buf);
