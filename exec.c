@@ -34,8 +34,8 @@ static int open_redir_fd(char* file, int flags) {
 // executes a command - does not return
 void exec_cmd(struct cmd* cmd) {
 
-	struct execcmd* e;
 	struct redircmd* r;
+	struct execcmd* e;
 	struct pipecmd* p;
 	struct backcmd* b;
 	char buf[BUFLEN];
@@ -54,8 +54,6 @@ void exec_cmd(struct cmd* cmd) {
 			snprintf(buf, sizeof buf, "cannot exec %s ", e->argv[0]);
 			perror(buf);
 			
-			free(ss.ss_sp);
-
 			break;
 
 		case BACK: {
@@ -143,6 +141,7 @@ void exec_cmd(struct cmd* cmd) {
 			
 			exec_cmd(r->c);
 
+			free(ss.ss_sp);
 			free_command(cmd);
 
 			_exit(EXIT_FAILURE);
