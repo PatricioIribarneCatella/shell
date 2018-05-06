@@ -35,7 +35,7 @@ static int open_redir_fd(char* file, int flags) {
 void exec_cmd(struct cmd* cmd) {
 
 	struct execcmd* e;
-	struct execcmd* r;
+	struct redircmd* r;
 	struct pipecmd* p;
 	struct backcmd* b;
 	char buf[BUFLEN];
@@ -75,7 +75,7 @@ void exec_cmd(struct cmd* cmd) {
 
 		case REDIR: {
 			// changes the input/output flow
-			r = (struct execcmd*)cmd;
+			r = (struct redircmd*)cmd;
 			int fd_in, fd_out, fd_err;
 			
 			// stdin redirection
@@ -129,8 +129,7 @@ void exec_cmd(struct cmd* cmd) {
 				}
 			}
 			
-			cmd->type = EXEC;
-			exec_cmd(cmd);
+			exec_cmd(r->c);
 			break;
 		}
 		

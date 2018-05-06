@@ -14,13 +14,20 @@ struct execcmd {
 	pid_t pid;
 	char scmd[BUFLEN];
 	int argc;
-	char* argv[MAXARGS];
 	int eargc;
+	char* argv[MAXARGS];
 	char* eargv[MAXARGS];
+};
+
+struct redircmd {
+	int type;
+	pid_t pid;
+	char scmd[BUFLEN];
 	int flags;
 	char out_file[FNAMESIZE];
 	char in_file[FNAMESIZE];
 	char err_file[FNAMESIZE];
+	struct cmd* c;
 };
 
 struct pipecmd {

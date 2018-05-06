@@ -161,6 +161,15 @@ static struct cmd* parse_exec(char* buf_cmd) {
 	return (struct cmd*)c;
 }
 
+static struct cmd* parse_redir(char* buf_cmd) {
+
+	struct redircmd* r;
+
+	
+
+	r = (struct redircmd*)redir_cmd_create(buf_cmd);
+}
+
 // parses a command knowing that it contains
 // the '&' char
 static struct cmd* parse_back(char* buf_cmd) {
@@ -173,7 +182,7 @@ static struct cmd* parse_back(char* buf_cmd) {
 	
 	buf_cmd[i] = END_STRING;
 	
-	e = parse_exec(buf_cmd);
+	e = parse_redir(buf_cmd);
 
 	return back_cmd_create(e);
 }
@@ -194,7 +203,7 @@ static struct cmd* parse_cmd(char* buf_cmd) {
 			buf_cmd[idx - 1] != '>')
 		return parse_back(buf_cmd);
 		
-	return parse_exec(buf_cmd);
+	return parse_redir(buf_cmd);
 }
 
 // parses the command line recursively
