@@ -8,6 +8,7 @@ void free_command(struct cmd* cmd) {
 	struct pipecmd* p;
 	struct execcmd* e;
 	struct backcmd* b;
+	struct redircmd* r;
 
 	if (cmd->type == PIPE) {
 		
@@ -26,6 +27,15 @@ void free_command(struct cmd* cmd) {
 
 		free_command(b->c);
 		free(b);
+		return;
+	}
+
+	if (cmd->type == REDIR) {
+	
+		r = (struct redircmd*)cmd;
+
+		free_command(r->c);
+		free(r);
 		return;
 	}
 

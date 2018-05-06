@@ -14,6 +14,19 @@ struct cmd* exec_cmd_create(char* buf_cmd) {
 	return (struct cmd*)e;
 }
 
+struct cmd* redir_cmd_create(char* buf_cmd) {
+
+	struct redircmd* r;
+
+	r = (struct redircmd*)calloc(sizeof(*r), sizeof(*r));
+
+	r->type = REDIR;
+	r->c = exec_cmd_create(buf_cmd);
+	strcpy(r->scmd, buf_cmd);
+
+	return (struct cmd*)r;
+}
+
 // creates a backcmd struct to store the
 // background command to be executed
 struct cmd* back_cmd_create(struct cmd* c) {
