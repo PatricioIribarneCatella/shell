@@ -31,6 +31,8 @@ static int open_redir_fd(char* file, int flags) {
 	return fd;
 }
 
+// opens the file and redirects it
+// to the appropiate standar flow
 static void redir_std_flow(struct cmd* cmd,
 		struct file f, int redir_fd) {
 
