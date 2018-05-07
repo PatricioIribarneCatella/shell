@@ -6,7 +6,8 @@
 
 struct cmd* exec_cmd_create(char* cmd);
 
-struct cmd* redir_cmd_create(char* cmd);
+struct cmd* redir_cmd_create(struct cmd* e,
+	struct file* in, struct file* out, struct file* err);
 
 struct cmd* back_cmd_create(struct cmd* c);
 

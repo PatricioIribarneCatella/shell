@@ -14,15 +14,21 @@ struct cmd* exec_cmd_create(char* buf_cmd) {
 	return (struct cmd*)e;
 }
 
-struct cmd* redir_cmd_create(char* buf_cmd) {
+struct cmd* redir_cmd_create(struct cmd* e,
+		struct file* in,
+	       	struct file* out,
+		struct file* err) {
 
 	struct redircmd* r;
 
 	r = (struct redircmd*)calloc(sizeof(*r), sizeof(*r));
 
 	r->type = REDIR;
-	r->c = exec_cmd_create(buf_cmd);
-	strcpy(r->scmd, buf_cmd);
+	r->c = e;
+	memcpy(&(r->in), in, sizeof(struct file));
+	memcpy(&(r->out), out, sizeof(struct file));
+	memcpy(&(r->err), err, sizeof(struct file));
+	strcpy(r->scmd, e->scmd);
 
 	return (struct cmd*)r;
 }

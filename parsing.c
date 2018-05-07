@@ -18,7 +18,10 @@ static char* get_token(char* buf, int idx) {
 }
 
 // parses and changes stdin/out/err if needed
-static bool parse_redir_flow(struct redircmd* r, char* arg) {
+static bool parse_redir_flow(char* buf,
+			struct file* in,
+			struct file* out,
+			struct file* err) {
 
 	int inIdx, outIdx;
 
@@ -124,15 +127,31 @@ static char* expand_environ_var(char* arg) {
 	return arg;
 }
 
+// checks if the token contains
+// a redir operator
+static bool contains_redir(char* arg) {
+
+	if (block_contains(arg, '>') ||
+		block_contains(arg, '<')) {
+		
+		free(arg);
+		return true;
+	}
+
+	return false;
+}
+
 // parses one single command having into account:
 // - the arguments passed to the program
 // - stdin/stdout/stderr flow changes
 // - environment variables (expand and set)
-static void parse_exec(char* buf_cmd, struct redircmd* r) {
+static struct cmd* parse_exec(char* buf_cmd) {
 
 	char* tok;
-	struct execcmd* e = (struct execcmd*)(r->c);
+	struct execcmd* e;
 	int idx = 0, argc = 0;
+
+	e = (struct execcmd*)exec_cmd_create(buf_cmd);
 	
 	while (buf_cmd[idx] != END_STRING) {
 	
@@ -142,7 +161,7 @@ static void parse_exec(char* buf_cmd, struct redircmd* r) {
 		if (buf_cmd[idx] != END_STRING)
 			idx++;
 		
-		if (parse_redir_flow(r, tok))
+		if (contains_redir(tok))
 			continue;
 		
 		if (parse_environ_var(e, tok))
@@ -155,17 +174,21 @@ static void parse_exec(char* buf_cmd, struct redircmd* r) {
 	
 	e->argv[argc] = (char*)NULL;
 	e->argc = argc;
+
+	return (struct cmd*)e;
 }
 
 static struct cmd* parse_redir(char* buf_cmd) {
 
+	struct cmd* e;
 	struct redircmd* r;
+	struct file in, out, err;
 
-	r = (struct redircmd*)redir_cmd_create(buf_cmd);
+	e = parse_exec(buf_cmd);
 
-	parse_exec(buf_cmd, r);
+	parse_redir_flow(buf_cmd, &in, &out, &err);
 
-	return (struct cmd*)r;
+	return redir_cmd_create(e, &in, &out, &err);
 }
 
 // parses a command knowing that it contains
