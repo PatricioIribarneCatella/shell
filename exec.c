@@ -31,6 +31,32 @@ static int open_redir_fd(char* file, int flags) {
 	return fd;
 }
 
+static void redir_std_flow(struct cmd* cmd,
+		struct file f, int redir_fd) {
+
+	int fd;
+	char buf[BUFLEN];
+
+	if (strlen(f.name) > 0) {
+		if ((fd = open_redir_fd(f.name, f.flags)) < 0) {
+			memset(buf, 0, BUFLEN);
+			snprintf(buf, sizeof buf, "cannot open file: %s ", f.name);
+			perror(buf);
+			free(ss.ss_sp);
+			free_command(cmd);
+			_exit(EXIT_FAILURE);
+		}
+		if (dup2(fd, redir_fd) < 0) {
+			memset(buf, 0, BUFLEN);
+			snprintf(buf, sizeof buf, "cannot dup file: %s ", f.name);
+			perror(buf);
+			free(ss.ss_sp);
+			free_command(cmd);
+			_exit(EXIT_FAILURE);
+		}
+	}
+}
+
 // executes a command - does not return
 void exec_cmd(struct cmd* cmd) {
 
@@ -47,9 +73,9 @@ void exec_cmd(struct cmd* cmd) {
 			e = (struct execcmd*)cmd;
 
 			set_environ_vars(e->eargv, e->eargc);
-			
-			execvp(e->argv[0], e->argv);	
 		
+			execvp(e->argv[0], e->argv);
+
 			memset(buf, 0, BUFLEN);
 			snprintf(buf, sizeof buf, "cannot exec %s ", e->argv[0]);
 			perror(buf);
@@ -72,70 +98,15 @@ void exec_cmd(struct cmd* cmd) {
 		case REDIR: {
 			// changes the input/output flow
 			r = (struct redircmd*)cmd;
-			int fd_in, fd_out, fd_err;
 			
 			// stdin redirection
-			if (strlen(r->in.name) > 0) {
-				if ((fd_in = open_redir_fd(r->in.name, r->in.flags)) < 0) {
-					memset(buf, 0, BUFLEN);
-					snprintf(buf, sizeof buf, "cannot open file: %s ", r->in.name);
-					perror(buf);
-					free(ss.ss_sp);
-					free_command(cmd);
-					_exit(EXIT_FAILURE);
-				}
-				if (dup2(fd_in, STDIN_FILENO) < 0) {
-					memset(buf, 0, BUFLEN);
-					snprintf(buf, sizeof buf, "cannot dup stdin file: %s ", r->in.name);
-					perror(buf);
-					free(ss.ss_sp);
-					free_command(cmd);
-					_exit(EXIT_FAILURE);
-				}
-			}
-			
+			redir_std_flow(cmd, r->in, STDIN_FILENO);
+		
 			// stdout redirection
-			if (strlen(r->out.name) > 0) {
-				if ((fd_out = open_redir_fd(r->out.name, r->out.flags)) < 0) {
-					memset(buf, 0, BUFLEN);
-					snprintf(buf, sizeof buf, "cannot open file: %s ", r->out.name);
-					perror(buf);
-					free(ss.ss_sp);
-					free_command(cmd);
-					_exit(EXIT_FAILURE);
-				}
-				if (dup2(fd_out, STDOUT_FILENO) < 0) {
-					memset(buf, 0, BUFLEN);
-					snprintf(buf, sizeof buf, "cannot dup stdout file: %s ", r->out.name);
-					perror(buf);
-					free(ss.ss_sp);
-					free_command(cmd);
-					_exit(EXIT_FAILURE);
-				}
-			}
-
+			redir_std_flow(cmd, r->out, STDOUT_FILENO);
+		
 			// stderr redirection
-			if (strlen(r->err.name) > 0) {
-				if (strcmp(r->err.name, "&1") == 0) {
-					fd_err = STDOUT_FILENO;
-				}
-				else if ((fd_err = open_redir_fd(r->err.name, r->err.flags)) < 0) {
-					memset(buf, 0, BUFLEN);
-					snprintf(buf, sizeof buf, "cannot open file: %s ", r->err.name);
-					perror(buf);
-					free(ss.ss_sp);
-					free_command(cmd);
-					_exit(EXIT_FAILURE);
-				}
-				if (dup2(fd_err, STDERR_FILENO) < 0) {
-					memset(buf, 0, BUFLEN);
-					snprintf(buf, sizeof buf, "cannot dup stderr file: %s ", r->err.name);
-					perror(buf);
-					free(ss.ss_sp);
-					free_command(cmd);
-					_exit(EXIT_FAILURE);
-				}
-			}
+			redir_std_flow(cmd, r->err, STDERR_FILENO);
 			
 			exec_cmd(r->c);
 

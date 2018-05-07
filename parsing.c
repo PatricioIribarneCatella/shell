@@ -17,58 +17,86 @@ static char* get_token(char* buf, int idx) {
 	return tok;
 }
 
-// parses and changes stdin/out/err if needed
-static bool parse_redir_flow(char* buf,
-			struct file* in,
-			struct file* out,
-			struct file* err) {
+// parse flow redirection for output
+static bool parse_redir_output(char* tok,
+		struct file* out, struct file* err) {
 
-	int inIdx, outIdx;
+	int outIdx;
 
-	// flow redirection for output
-	if ((outIdx = block_contains(arg, '>')) >= 0) {
+	if ((outIdx = block_contains(tok, '>')) >= 0) {
 
-		r->out.flags = O_WRONLY | O_CREAT;
-		r->err.flags = O_WRONLY | O_CREAT | O_TRUNC;
+		out->flags = O_WRONLY | O_CREAT;
+		err->flags = O_WRONLY | O_CREAT | O_TRUNC;
 
 		switch (outIdx) {
 			// stdout redir
 			case 0: {
-				if (arg[++outIdx] == '>') {
-					r->out.flags |= O_APPEND;
-					strcpy(r->out.name, arg + 2);
+				if (tok[++outIdx] == '>') {
+					out->flags |= O_APPEND;
+					strcpy(out->name, tok + 2);
 				} else {
-					r->out.flags |= O_TRUNC;
-					strcpy(r->out.name, arg + 1);
+					out->flags |= O_TRUNC;
+					strcpy(out->name, tok + 1);
 				}
 				break;
 			}
 			// stderr redir
 			case 1: {
-				strcpy(r->err.name, &arg[outIdx + 1]);
+				strcpy(err->name, &tok[outIdx + 1]);
 				break;
 			}
 		}
 		
-		free(arg);
-		
+		free(tok);
 		return true;
 	}
-	
-	// flow redirection for input
-	if ((inIdx = block_contains(arg, '<')) >= 0) {
-		// stdin redir
-		
-		r->in.flags = O_RDONLY;
 
-		strcpy(r->in.name, arg + 1);
-
-		free(arg);
-		
-		return true;
-	}
-	
 	return false;
+}
+
+// parse flow redirection for input
+static bool parse_redir_input(char* tok, struct file* in) {
+
+	int inIdx;
+
+	if ((inIdx = block_contains(tok, '<')) >= 0) {
+		// stdin redir
+		in->flags = O_RDONLY;
+
+		strcpy(in->name, tok + 1);
+
+		free(tok);
+		return true;
+	}
+
+	return false;
+}
+
+// parses and changes stdin/out/err if needed
+static void parse_redir_flow(char* buf,
+			struct file* in,
+			struct file* out,
+			struct file* err) {
+
+	int idx = 0;
+	char* tok;
+	
+	while (buf[idx] != END_STRING) {
+
+		tok = get_token(buf, idx);
+		idx = idx + strlen(tok);
+
+		if (buf[idx] != END_STRING)
+			idx++;
+
+		if (parse_redir_output(tok, out, err))
+			continue;
+
+		if (parse_redir_input(tok, in))
+			continue;
+		
+		free(tok);
+	}
 }
 
 // parses and sets a pair KEY=VALUE
@@ -131,8 +159,8 @@ static char* expand_environ_var(char* arg) {
 // a redir operator
 static bool contains_redir(char* arg) {
 
-	if (block_contains(arg, '>') ||
-		block_contains(arg, '<')) {
+	if (block_contains(arg, '>') >= 0 ||
+		block_contains(arg, '<') >= 0) {
 		
 		free(arg);
 		return true;
@@ -181,9 +209,12 @@ static struct cmd* parse_exec(char* buf_cmd) {
 static struct cmd* parse_redir(char* buf_cmd) {
 
 	struct cmd* e;
-	struct redircmd* r;
 	struct file in, out, err;
 
+	memset(&in, 0, sizeof(struct file));
+	memset(&out, 0, sizeof(struct file));
+	memset(&err, 0, sizeof(struct file));
+	
 	e = parse_exec(buf_cmd);
 
 	parse_redir_flow(buf_cmd, &in, &out, &err);
