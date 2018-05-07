@@ -3,12 +3,14 @@
 
 /* Commands definition types */
 
+// command struct interface
 struct cmd {
 	int type;
 	pid_t pid;
 	char scmd[BUFLEN];
 };
 
+// exec command struct
 struct execcmd {
 	int type;
 	pid_t pid;
@@ -19,16 +21,24 @@ struct execcmd {
 	char* eargv[MAXARGS];
 };
 
+// file struct
+struct file {
+	int flags;
+	char name[FNAMESIZE];
+};
+
+// redirection command struct
 struct redircmd {
 	int type;
 	pid_t pid;
 	char scmd[BUFLEN];
-	char out_file[FNAMESIZE];
-	char in_file[FNAMESIZE];
-	char err_file[FNAMESIZE];
+	struct file out;
+	struct file in;
+	struct file err;
 	struct cmd* c;
 };
 
+// pipe command struct
 struct pipecmd {
 	int type;
 	pid_t pid;
@@ -37,6 +47,7 @@ struct pipecmd {
 	struct cmd* rightcmd;
 };
 
+// background command struct
 struct backcmd {
 	int type;
 	pid_t pid;

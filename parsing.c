@@ -25,18 +25,24 @@ static bool parse_redir_flow(struct redircmd* r, char* arg) {
 	// flow redirection for output
 	if ((outIdx = block_contains(arg, '>')) >= 0) {
 
+		r->out.flags = O_WRONLY | O_CREAT;
+		r->err.flags = O_WRONLY | O_CREAT | O_TRUNC;
+
 		switch (outIdx) {
 			// stdout redir
 			case 0: {
-				if (arg[++outIdx] == '>')
-					strcpy(r->out_file, arg + 2);
-				else
-					strcpy(r->out_file, arg + 1);
+				if (arg[++outIdx] == '>') {
+					r->out.flags |= O_APPEND;
+					strcpy(r->out.name, arg + 2);
+				} else {
+					strcpy(r->out.name, arg + 1);
+					r->out.flags |= O_TRUNC;
+				}
 				break;
 			}
 			// stderr redir
 			case 1: {
-				strcpy(r->err_file, &arg[outIdx + 1]);
+				strcpy(r->err.name, &arg[outIdx + 1]);
 				break;
 			}
 		}
@@ -49,7 +55,10 @@ static bool parse_redir_flow(struct redircmd* r, char* arg) {
 	// flow redirection for input
 	if ((inIdx = block_contains(arg, '<')) >= 0) {
 		// stdin redir
-		strcpy(r->in_file, arg + 1);
+		
+		r->in.flags = O_RDONLY;
+
+		strcpy(r->in.name, arg + 1);
 
 		free(arg);
 		
