@@ -35,8 +35,8 @@ static bool parse_redir_flow(struct redircmd* r, char* arg) {
 					r->out.flags |= O_APPEND;
 					strcpy(r->out.name, arg + 2);
 				} else {
-					strcpy(r->out.name, arg + 1);
 					r->out.flags |= O_TRUNC;
+					strcpy(r->out.name, arg + 1);
 				}
 				break;
 			}
