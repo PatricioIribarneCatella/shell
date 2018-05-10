@@ -40,7 +40,9 @@ static void redir_std_flow(struct cmd* cmd,
 	char buf[BUFLEN];
 
 	if (strlen(f.name) > 0) {
-		if ((fd = open_redir_fd(f.name, f.flags)) < 0) {
+		if (strcmp(f.name, "&1") == 0)
+			fd = STDOUT_FILENO;
+		else if ((fd = open_redir_fd(f.name, f.flags)) < 0) {
 			memset(buf, 0, BUFLEN);
 			snprintf(buf, sizeof buf, "cannot open file: %s ", f.name);
 			perror(buf);
