@@ -128,13 +128,17 @@ static bool parse_environ_var(struct execcmd* c, char* arg) {
 static char* expand_environ_var(char* arg) {
 	
 	char* aux;
-	char s[10];
+	char s[20];
 	size_t len;
 
 	if (arg[0] == '$') {
 		
 		if (arg[1] == '?') {
 			sprintf(s, "%d", status);
+			aux = s;
+		}
+		else if (arg[1] == '$') {
+			sprintf(s, "%d", getpid());
 			aux = s;
 		}
 		else
