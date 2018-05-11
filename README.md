@@ -47,7 +47,7 @@ $ /usr/bin/env | grep VAR
 VAR=hello
 ```
 
-- Environment (and magic - just '?' for now) variables expansion
+- Environment (and magic - '?' and '$') variables expansion
 
 ```bash
 $ echo $TERM
@@ -59,6 +59,9 @@ $ echo $?
 $ /bin/false
 $ echo $?
 1
+
+$ echo $$
+ [shell´s pid]
 ```
 
 - Standard flow redirection
