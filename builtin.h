@@ -15,4 +15,6 @@ int export_var(char* cmd);
 
 int exit_shell(char* cmd);
 
+int history(char* cmd);
+
 #endif // BUILTIN_H

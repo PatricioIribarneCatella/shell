@@ -26,14 +26,22 @@ int run_cmd(char* cmd) {
 	// 'export' built-in call
 	if (export_var(cmd))
 		return 0;
-	
+
+	// 'history' built-in call
+	if (history(cmd))
+		return 0;
+
 	// 'exit' built-in call
 	if (exit_shell(cmd))
 		return EXIT_SHELL;
 
 	// parses the command line
 	parsed = parse_line(cmd);
-	
+
+	// saves command string representation
+	// for 'history' output
+	save_command(parsed->scmd);
+
 	// forks and run the command
 	if ((p = fork()) == 0) {
 		

@@ -2,6 +2,7 @@
 #define RUNCMD_H
 
 #include "defs.h"
+#include "utils.h"
 #include "parsing.h"
 #include "exec.h"
 #include "printstatus.h"

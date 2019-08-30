@@ -52,3 +52,19 @@ void get_environ_value(char* arg, char* value, int idx) {
 	value[j] = END_STRING;
 }
 
+// saves command string representation
+// for 'history' command
+void save_command(char* scmd) {
+
+	FILE* f;
+
+	if (!(f = fopen(".sh_history", "a+"))) {
+		perror("save_command: cannot open file ");
+		_exit(EXIT_FAILURE);
+	}
+
+	fprintf(f, "%s\n", scmd);
+
+	fclose(f);
+}
+

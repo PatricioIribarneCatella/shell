@@ -10,7 +10,8 @@ int exit_shell(char* cmd) {
 	return 0;
 }
 
-// returns true if "chdir" was performed
+// returns true if 'cd' command
+// was performed
 int cd(char* cmd) {
 
 	char* dir;
@@ -63,7 +64,8 @@ int cd(char* cmd) {
 	return 0;
 }
 
-// returns true if 'pwd' was executed
+// returns true if 'pwd' command
+// was executed
 int pwd(char* cmd) {
 
 	char buf[BUFLEN];
@@ -83,7 +85,8 @@ int pwd(char* cmd) {
 
 }
 
-// returns true if export was performed
+// returns true if 'export' command
+// was performed
 int export_var(char* cmd) {
 	
 	int equalIdx;
@@ -115,6 +118,31 @@ int export_var(char* cmd) {
 		setenv(key, value, 1);
 
 		status = 0;
+
+		return 1;
+	}
+
+	return 0;
+}
+
+// returns true if 'history' command
+// was performed
+int history(char* cmd) {
+
+	FILE* f;
+	char buf[BUFLEN] = {0};
+
+	if (strcmp(cmd, "history") == 0) {
+	
+		if (!(f = fopen(".sh_history", "r"))) {
+			perror("history: cannot open file ");
+			_exit(EXIT_FAILURE);
+		}
+
+		while (fgets(buf, sizeof buf, f) != NULL)
+			fprintf(stdout, "%s", buf);
+
+		fclose(f);
 
 		return 1;
 	}
