@@ -15,7 +15,7 @@ extern struct cmd* back_cmds;
 /* Handler function for SIGCHLD signal */
 void sig_handler(int num) {
 	
-	char buf[BUFLEN] = {0};
+	char buf[2*BUFLEN] = {0};
 	fflush(stdout);
 
 	if (back_cmds != NULL && waitpid(back_cmds->pid, &status, WNOHANG) > 0) {

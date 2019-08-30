@@ -6,7 +6,7 @@ int status = 0;
 
 // runs the command in 'cmd'
 int run_cmd(char* cmd) {
-	
+
 	pid_t p, w;
 	struct cmd *parsed;
 
@@ -35,13 +35,13 @@ int run_cmd(char* cmd) {
 	if (exit_shell(cmd))
 		return EXIT_SHELL;
 
-	// parses the command line
-	parsed = parse_line(cmd);
-
 	// saves command string representation
 	// for 'history' output
-	save_command(parsed->scmd);
+	save_command(cmd);
 
+	// parses the command line
+	parsed = parse_line(cmd);
+	
 	// forks and run the command
 	if ((p = fork()) == 0) {
 		
