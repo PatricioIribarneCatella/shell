@@ -11,7 +11,7 @@ This project was developed from the scratch and motivated by the topics taught i
 ### Features 
 
 - Command execution with or without arguments
-- Built-in commands: _cd_, _pwd_, _exit_, _export_
+- Built-in commands: _cd_, _pwd_, _exit_, _export_, _history_
 - Environment and magic variables expansion
 - Flow redirection and pipe
 - Command execution with their own environment variables
