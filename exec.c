@@ -70,7 +70,9 @@ void exec_cmd(struct cmd* cmd) {
 	struct backcmd* b;
 	char buf[BUFLEN];
 	int pfd[2];
-
+	int exit_code, s;
+	pid_t auxp, rp;
+	
 	switch (cmd->type) {
 
 		case EXEC:
@@ -140,7 +142,9 @@ void exec_cmd(struct cmd* cmd) {
 				exec_cmd(p->leftcmd);
 			}
 			
-			if (fork() == 0) {
+			rp = fork();
+
+			if (rp == 0) {
 				dup2(pfd[READ], STDIN_FILENO);
 				close(pfd[READ]);
 				close(pfd[WRITE]);
@@ -155,10 +159,22 @@ void exec_cmd(struct cmd* cmd) {
 			free_command(parsed_pipe);
 			free(ss.ss_sp);
 
-			wait(NULL);
-			wait(NULL);
+			// waits for both childs
+			// and watches which one is the
+			// right command. Checks the status
+			// code to forward it to the
+			// main 'shell' process.
+			auxp = wait(&s);
+
+			if (auxp == rp)
+				exit_code = WEXITSTATUS(s);
+
+			auxp = wait(&s);
 			
-			_exit(EXIT_SUCCESS);
+			if (auxp == rp)
+				exit_code = WEXITSTATUS(s);
+			
+			_exit(exit_code);
 			break;
 		}
 	}

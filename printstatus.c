@@ -36,7 +36,10 @@ void print_status_info(struct cmd* cmd) {
 		print_pipe_info(cmd);
 		
 		fprintf(stdout, "] done %s\n", COLOR_RESET);
-		
+	
+		// Sets global variable 'status'
+		status = WEXITSTATUS(status);
+
 		return;
 	}
 
